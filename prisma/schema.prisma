@@ -1,0 +1,24 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// UserProfile is the central identity record that links a Supabase Auth user
+// (identified by authUserId) to all business data in the application.
+// All future tables (transactions, accounts, budgets, etc.) must reference
+// UserProfile.id to ensure data is always scoped to a single user.
+model UserProfile {
+  id         String   @id @default(cuid())
+  authUserId String   @unique
+  email      String?
+  firstName  String?
+  lastName   String?
+  currency   String   @default("CAD")
+  locale     String   @default("fr-CA")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
