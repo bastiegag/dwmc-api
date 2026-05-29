@@ -1,7 +1,6 @@
 # dwmc-api
 
 A modern, production-minded REST API backend for a personal budget application.
-The first real business feature implemented is **user-scoped categories**.
 
 ## Stack
 
@@ -39,11 +38,6 @@ src/
       auth.middleware.ts  # JWT validation middleware
       auth.service.ts     # Business logic (upsert UserProfile)
       auth.schema.ts      # Zod schemas for auth types
-    categories/
-      category.routes.ts
-      category.schema.ts
-      category.service.ts
-      category.repository.ts
 
   shared/
     errors/
@@ -64,7 +58,6 @@ src/
     health.test.ts
     readiness.test.ts
     auth.test.ts
-    categories.test.ts
     error-handler.test.ts
 
 prisma/
@@ -75,7 +68,6 @@ docs/
   architecture.md
   api.md
   auth.md
-  categories.md
   local-development.md
   conventions.md
 ```
@@ -139,11 +131,6 @@ The backend validates the token with Supabase, extracts the user identity, and a
 | GET | /health | public | Liveness check |
 | GET | /ready | public | Readiness check (DB ping) |
 | GET | /api/v1/auth/me | required | Current user + profile |
-| GET | /api/v1/categories | required | List user categories |
-| POST | /api/v1/categories | required | Create user category |
-| GET | /api/v1/categories/:id | required | Get one user category |
-| PATCH | /api/v1/categories/:id | required | Update one user category |
-| DELETE | /api/v1/categories/:id | required | Soft-delete (archive) one user category |
 
 See `docs/api.md` for request/response details.
 
@@ -170,7 +157,8 @@ See `docs/api.md` for request/response details.
 
 ## Next planned modules
 
-- `transactions` — record income and expenses (next after categories)
+- `transactions` — record income and expenses
+- `categories` — categorise transactions
 - `accounts` — bank accounts / wallets
 - `budgets` — monthly spending limits
 - `recurring` — recurring transaction rules
