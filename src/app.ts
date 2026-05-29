@@ -7,7 +7,6 @@ import { handleError } from './shared/errors/error-handler.js'
 import { successResponse, errorResponse } from './shared/http/api-response.js'
 import { prisma } from './db/prisma.js'
 import { authRoutes } from './modules/auth/auth.routes.js'
-import { categoryRoutes } from './modules/categories/category.routes.js'
 
 const app = new Hono<AppBindings>()
 
@@ -43,6 +42,5 @@ app.get('/ready', async (c) => {
 // ── API routes ──────────────────────────────────────────────────────────────
 
 app.route('/api/v1/auth', authRoutes)
-app.route('/api/v1/categories', categoryRoutes)
 
 export { app }

@@ -7,11 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum CategoryType {
-  INCOME
-  EXPENSE
-}
-
 // UserProfile is the central identity record that links a Supabase Auth user
 // (identified by authUserId) to all business data in the application.
 // All future tables (transactions, accounts, budgets, etc.) must reference
@@ -24,30 +19,6 @@ model UserProfile {
   lastName   String?
   currency   String   @default("CAD")
   locale     String   @default("fr-CA")
-  categories Category[]
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-}
-
-model Category {
-  id            String      @id @default(cuid())
-  userProfileId String
-  userProfile   UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
-
-  name     String
-  type     CategoryType
-  color    String?
-  icon     String?
-  parentId String?
-  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children Category[] @relation("CategoryHierarchy")
-
-  isArchived Boolean @default(false)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([userProfileId])
-  @@index([parentId])
-  @@unique([userProfileId, name, type, parentId])
 }
