@@ -38,6 +38,16 @@ src/
       auth.middleware.ts  # JWT validation middleware
       auth.service.ts     # Business logic (upsert UserProfile)
       auth.schema.ts      # Zod schemas for auth types
+    sections/
+      section.routes.ts
+      section.schema.ts
+      section.service.ts
+      section.repository.ts
+    categories/
+      category.routes.ts
+      category.schema.ts
+      category.service.ts
+      category.repository.ts
 
   shared/
     errors/
@@ -68,6 +78,7 @@ docs/
   architecture.md
   api.md
   auth.md
+  categories.md
   local-development.md
   conventions.md
 ```
@@ -131,6 +142,16 @@ The backend validates the token with Supabase, extracts the user identity, and a
 | GET | /health | public | Liveness check |
 | GET | /ready | public | Readiness check (DB ping) |
 | GET | /api/v1/auth/me | required | Current user + profile |
+| GET | /api/v1/sections | required | List sections |
+| POST | /api/v1/sections | required | Create section |
+| GET | /api/v1/sections/:id | required | Get section by id |
+| PATCH | /api/v1/sections/:id | required | Update section |
+| DELETE | /api/v1/sections/:id | required | Archive section (soft delete) |
+| GET | /api/v1/categories | required | List categories |
+| POST | /api/v1/categories | required | Create category |
+| GET | /api/v1/categories/:id | required | Get category by id |
+| PATCH | /api/v1/categories/:id | required | Update category |
+| DELETE | /api/v1/categories/:id | required | Archive category (soft delete) |
 
 See `docs/api.md` for request/response details.
 
@@ -158,7 +179,6 @@ See `docs/api.md` for request/response details.
 ## Next planned modules
 
 - `transactions` — record income and expenses
-- `categories` — categorise transactions
 - `accounts` — bank accounts / wallets
 - `budgets` — monthly spending limits
 - `recurring` — recurring transaction rules
