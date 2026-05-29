@@ -95,7 +95,7 @@ Readiness check — pings the database to confirm connectivity.
 Returns the authenticated Supabase user and their local `UserProfile`.
 Creates or updates the profile on every call to stay in sync with Supabase Auth.
 
-**Auth:** required — `Authorization: ******`
+**Auth:** required — JWT token in Authorization header
 
 **Response 200**
 ```json
@@ -124,7 +124,7 @@ Creates or updates the profile on every call to stay in sync with Supabase Auth.
 
 Returns sections for the authenticated user.
 
-**Auth:** required — `Authorization: ******`
+**Auth:** required — JWT token in Authorization header
 
 **Query params**
 - `includeArchived=true|false` (default: `false`)
@@ -152,7 +152,7 @@ Returns sections for the authenticated user.
 
 Creates a section for the authenticated user.
 
-**Auth:** required — `Authorization: ******`
+**Auth:** required — JWT token in Authorization header
 
 **Request body**
 ```json
@@ -184,7 +184,7 @@ Creates a section for the authenticated user.
 
 Returns one section owned by the authenticated user.
 
-**Auth:** required — `Authorization: ******`
+**Auth:** required — JWT token in Authorization header
 
 **Query params**
 - `includeCategories=true|false` (default: `false`)
@@ -198,7 +198,7 @@ Returns one section owned by the authenticated user.
 
 Updates one section owned by the authenticated user.
 
-**Auth:** required — `Authorization: ******`
+**Auth:** required — JWT token in Authorization header
 
 **Request body**
 ```json
@@ -220,7 +220,7 @@ Updates one section owned by the authenticated user.
 
 Soft-deletes a section (`isArchived = true`) and archives all categories in that section.
 
-**Auth:** required — `Authorization: ******`
+**Auth:** required — JWT token in Authorization header
 
 **Errors**
 - `NOT_FOUND` (404)
@@ -231,7 +231,7 @@ Soft-deletes a section (`isArchived = true`) and archives all categories in that
 
 Returns categories for the authenticated user.
 
-**Auth:** required — `Authorization: ******`
+**Auth:** required — JWT token in Authorization header
 
 **Query params**
 - `includeArchived=true|false` (default: `false`)
@@ -262,7 +262,7 @@ If `sectionId` is provided and does not belong to the authenticated user, return
 
 Creates a category for the authenticated user.
 
-**Auth:** required — `Authorization: ******`
+**Auth:** required — JWT token in Authorization header
 
 **Request body**
 ```json
@@ -296,7 +296,7 @@ Creates a category for the authenticated user.
 
 Returns one category owned by the authenticated user.
 
-**Auth:** required — `Authorization: ******`
+**Auth:** required — JWT token in Authorization header
 
 **Errors**
 - `NOT_FOUND` (404)
@@ -307,7 +307,7 @@ Returns one category owned by the authenticated user.
 
 Updates one category owned by the authenticated user.
 
-**Auth:** required — `Authorization: ******`
+**Auth:** required — JWT token in Authorization header
 
 **Request body**
 ```json
@@ -330,7 +330,7 @@ Updates one category owned by the authenticated user.
 
 Soft-deletes a category (`isArchived = true`).
 
-**Auth:** required — `Authorization: ******`
+**Auth:** required — JWT token in Authorization header
 
 **Errors**
 - `NOT_FOUND` (404)
