@@ -3,7 +3,7 @@
 ## Philosophy
 
 The backend is organised around **vertical modules** — one folder per domain concern
-(auth, transactions, budgets, …). Each module owns its routes, validation schemas, business
+(auth, categories, transactions, budgets, …). Each module owns its routes, validation schemas, business
 logic, and database queries. Shared infrastructure (error handling, response formatting,
 logging) lives in `src/shared/`.
 
@@ -48,11 +48,11 @@ HTTP response
 1. Create `src/modules/<name>/` with the standard files:
 
 ```
-src/modules/transactions/
-  transaction.routes.ts
-  transaction.schema.ts
-  transaction.service.ts
-  transaction.repository.ts
+src/modules/categories/
+  category.routes.ts
+  category.schema.ts
+  category.service.ts
+  category.repository.ts
 ```
 
 2. Register the router in `src/app.ts`:
