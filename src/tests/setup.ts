@@ -12,11 +12,11 @@ process.env['APP_ORIGIN'] = 'http://localhost:5173'
 // Constructed from parts to avoid credential filters in tooling.
 // Format: postgresql://<user>:<password>@<host>:<port>/<dbname>
 process.env['DATABASE_URL'] = [
-  'postgresql://',
-  'postgres',
-  ':',
-  'postgres',
-  '@localhost:5432/dwmc_api_test',
+    'postgresql://',
+    'postgres',
+    ':',
+    'postgres',
+    '@localhost:5432/dwmc_api_test',
 ].join('')
 process.env['SUPABASE_URL'] = 'https://test.supabase.co'
 process.env['SUPABASE_ANON_KEY'] = 'test-anon-key'

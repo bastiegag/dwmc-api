@@ -55,9 +55,9 @@ Liveness check — returns 200 as long as the process is alive.
 
 ```json
 {
-  "data": {
-    "status": "ok"
-  }
+    "data": {
+        "status": "ok"
+    }
 }
 ```
 
@@ -73,10 +73,10 @@ Readiness check — pings the database to confirm connectivity.
 
 ```json
 {
-  "data": {
-    "status": "ready",
-    "database": "connected"
-  }
+    "data": {
+        "status": "ready",
+        "database": "connected"
+    }
 }
 ```
 
@@ -84,10 +84,10 @@ Readiness check — pings the database to confirm connectivity.
 
 ```json
 {
-  "error": {
-    "code": "INTERNAL_SERVER_ERROR",
-    "message": "Database unavailable"
-  }
+    "error": {
+        "code": "INTERNAL_SERVER_ERROR",
+        "message": "Database unavailable"
+    }
 }
 ```
 
@@ -104,21 +104,21 @@ Creates or updates the profile on every call to stay in sync with Supabase Auth.
 
 ```json
 {
-  "data": {
-    "user": {
-      "id": "uuid",
-      "email": "user@example.com"
-    },
-    "profile": {
-      "id": "cuid",
-      "authUserId": "uuid",
-      "email": "user@example.com",
-      "firstName": null,
-      "lastName": null,
-      "currency": "CAD",
-      "locale": "fr-CA"
+    "data": {
+        "user": {
+            "id": "uuid",
+            "email": "user@example.com"
+        },
+        "profile": {
+            "id": "cuid",
+            "authUserId": "uuid",
+            "email": "user@example.com",
+            "firstName": null,
+            "lastName": null,
+            "currency": "CAD",
+            "locale": "fr-CA"
+        }
     }
-  }
 }
 ```
 
@@ -139,16 +139,16 @@ Returns sections for the authenticated user.
 
 ```json
 {
-  "data": [
-    {
-      "id": "cuid",
-      "name": "Food",
-      "color": "#22c55e",
-      "isArchived": false,
-      "createdAt": "2026-05-29T10:00:00.000Z",
-      "updatedAt": "2026-05-29T10:00:00.000Z"
-    }
-  ]
+    "data": [
+        {
+            "id": "cuid",
+            "name": "Food",
+            "color": "#22c55e",
+            "isArchived": false,
+            "createdAt": "2026-05-29T10:00:00.000Z",
+            "updatedAt": "2026-05-29T10:00:00.000Z"
+        }
+    ]
 }
 ```
 
@@ -164,8 +164,8 @@ Creates a section for the authenticated user.
 
 ```json
 {
-  "name": "Food",
-  "color": "#22c55e"
+    "name": "Food",
+    "color": "#22c55e"
 }
 ```
 
@@ -173,12 +173,12 @@ Creates a section for the authenticated user.
 
 ```json
 {
-  "data": {
-    "id": "cuid",
-    "name": "Food",
-    "color": "#22c55e",
-    "isArchived": false
-  }
+    "data": {
+        "id": "cuid",
+        "name": "Food",
+        "color": "#22c55e",
+        "isArchived": false
+    }
 }
 ```
 
@@ -215,9 +215,9 @@ Updates one section owned by the authenticated user.
 
 ```json
 {
-  "name": "Home",
-  "color": "#3b82f6",
-  "isArchived": false
+    "name": "Home",
+    "color": "#3b82f6",
+    "isArchived": false
 }
 ```
 
@@ -258,17 +258,17 @@ If `sectionId` is provided and does not belong to the authenticated user, return
 
 ```json
 {
-  "data": [
-    {
-      "id": "cuid",
-      "name": "Groceries",
-      "icon": "shopping-cart",
-      "sectionId": "section-cuid",
-      "isArchived": false,
-      "createdAt": "2026-05-29T10:00:00.000Z",
-      "updatedAt": "2026-05-29T10:00:00.000Z"
-    }
-  ]
+    "data": [
+        {
+            "id": "cuid",
+            "name": "Groceries",
+            "icon": "shopping-cart",
+            "sectionId": "section-cuid",
+            "isArchived": false,
+            "createdAt": "2026-05-29T10:00:00.000Z",
+            "updatedAt": "2026-05-29T10:00:00.000Z"
+        }
+    ]
 }
 ```
 
@@ -284,9 +284,9 @@ Creates a category for the authenticated user.
 
 ```json
 {
-  "name": "Groceries",
-  "icon": "shopping-cart",
-  "sectionId": "section-cuid"
+    "name": "Groceries",
+    "icon": "shopping-cart",
+    "sectionId": "section-cuid"
 }
 ```
 
@@ -294,13 +294,13 @@ Creates a category for the authenticated user.
 
 ```json
 {
-  "data": {
-    "id": "cuid",
-    "name": "Groceries",
-    "icon": "shopping-cart",
-    "sectionId": "section-cuid",
-    "isArchived": false
-  }
+    "data": {
+        "id": "cuid",
+        "name": "Groceries",
+        "icon": "shopping-cart",
+        "sectionId": "section-cuid",
+        "isArchived": false
+    }
 }
 ```
 
@@ -333,10 +333,10 @@ Updates one category owned by the authenticated user.
 
 ```json
 {
-  "name": "Restaurants",
-  "icon": "utensils",
-  "sectionId": "section-cuid",
-  "isArchived": false
+    "name": "Restaurants",
+    "icon": "utensils",
+    "sectionId": "section-cuid",
+    "isArchived": false
 }
 ```
 

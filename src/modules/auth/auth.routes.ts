@@ -14,10 +14,10 @@ const authRoutes = new Hono<AppBindings>()
  * changes made via Supabase Auth (e.g. email changes).
  */
 authRoutes.get('/me', authMiddleware, async (c) => {
-  const authUser = c.get('authUser')
-  const profile = await getOrCreateUserProfile(authUser)
+    const authUser = c.get('authUser')
+    const profile = await getOrCreateUserProfile(authUser)
 
-  return c.json(successResponse({ user: authUser, profile }))
+    return c.json(successResponse({ user: authUser, profile }))
 })
 
 export { authRoutes }

@@ -88,8 +88,8 @@ import { authMiddleware } from '../auth/auth.middleware.js'
 const transactionRoutes = new Hono<AppBindings>()
 
 transactionRoutes.get('/', authMiddleware, async (c) => {
-  const authUser = c.get('authUser') // typed: { id: string, email?: string }
-  // fetch data scoped to authUser.id …
+    const authUser = c.get('authUser') // typed: { id: string, email?: string }
+    // fetch data scoped to authUser.id …
 })
 ```
 

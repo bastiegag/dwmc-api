@@ -25,7 +25,7 @@ app.onError(handleError)
 
 /** Returns 200 immediately if the process is alive. */
 app.get('/health', (c) => {
-  return c.json(successResponse({ status: 'ok' }))
+    return c.json(successResponse({ status: 'ok' }))
 })
 
 /**
@@ -33,12 +33,12 @@ app.get('/health', (c) => {
  * Returns 503 (with a structured error body) if the database is unavailable.
  */
 app.get('/ready', async (c) => {
-  try {
-    await prisma.$queryRaw`SELECT 1`
-    return c.json(successResponse({ status: 'ready', database: 'connected' }))
-  } catch {
-    return c.json(errorResponse('INTERNAL_SERVER_ERROR', 'Database unavailable'), 503)
-  }
+    try {
+        await prisma.$queryRaw`SELECT 1`
+        return c.json(successResponse({ status: 'ready', database: 'connected' }))
+    } catch {
+        return c.json(errorResponse('INTERNAL_SERVER_ERROR', 'Database unavailable'), 503)
+    }
 })
 
 // ── API routes ──────────────────────────────────────────────────────────────

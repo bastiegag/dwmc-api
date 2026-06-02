@@ -104,9 +104,9 @@ prisma.transaction.findMany()
 ## Sections and categories module pattern
 
 - `src/modules/sections/` and `src/modules/categories/` follow the standard layering:
-  - `*.routes.ts`: parse params/query/body, apply `authMiddleware`, call service, return `successResponse`
-  - `*.service.ts`: enforce user ownership rules and business constraints, throw `AppError`
-  - `*.repository.ts`: Prisma queries only, always scoped by `userProfileId`
+    - `*.routes.ts`: parse params/query/body, apply `authMiddleware`, call service, return `successResponse`
+    - `*.service.ts`: enforce user ownership rules and business constraints, throw `AppError`
+    - `*.repository.ts`: Prisma queries only, always scoped by `userProfileId`
 - Services use the authenticated Supabase user (`c.get('authUser')`), resolve the local `UserProfile`, and pass `UserProfile.id` to repositories.
 - Both modules use soft delete (`isArchived`) instead of hard delete.
 - Archiving a section also archives its child categories to keep data visibility consistent.

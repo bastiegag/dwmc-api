@@ -10,14 +10,14 @@ import type { AuthUser } from '../../types/app.js'
  * UserProfile via its `id` field.
  */
 export async function getOrCreateUserProfile(authUser: AuthUser) {
-  const profile = await prisma.userProfile.upsert({
-    where: { authUserId: authUser.id },
-    update: { email: authUser.email },
-    create: {
-      authUserId: authUser.id,
-      email: authUser.email,
-    },
-  })
+    const profile = await prisma.userProfile.upsert({
+        where: { authUserId: authUser.id },
+        update: { email: authUser.email },
+        create: {
+            authUserId: authUser.id,
+            email: authUser.email,
+        },
+    })
 
-  return profile
+    return profile
 }

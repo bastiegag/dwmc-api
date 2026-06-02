@@ -131,7 +131,7 @@ Another PostgreSQL instance is running. Stop it, or change the host port in
 
 ```yaml
 ports:
-  - '5433:5432' # map to host port 5433 instead
+    - '5433:5432' # map to host port 5433 instead
 ```
 
 Then update `DATABASE_URL` in `.env` accordingly.

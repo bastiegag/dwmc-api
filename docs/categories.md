@@ -29,14 +29,14 @@ Future `Transaction` records will reference a `Category` (and therefore indirect
 
 ```json
 {
-  "section": {
-    "id": "sec_food",
-    "name": "Food",
-    "color": "#22c55e",
-    "categories": [
-      { "id": "cat_groceries", "name": "Groceries", "icon": "shopping-cart" },
-      { "id": "cat_restaurants", "name": "Restaurants", "icon": "utensils" }
-    ]
-  }
+    "section": {
+        "id": "sec_food",
+        "name": "Food",
+        "color": "#22c55e",
+        "categories": [
+            { "id": "cat_groceries", "name": "Groceries", "icon": "shopping-cart" },
+            { "id": "cat_restaurants", "name": "Restaurants", "icon": "utensils" }
+        ]
+    }
 }
 ```

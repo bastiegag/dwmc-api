@@ -1,6 +1,6 @@
 export type AuthUser = {
-  id: string
-  email?: string
+    id: string
+    email?: string
 }
 
 /**
@@ -8,7 +8,7 @@ export type AuthUser = {
  * properly typed across the entire application, including middleware and routes.
  */
 export type AppBindings = {
-  Variables: {
-    authUser: AuthUser
-  }
+    Variables: {
+        authUser: AuthUser
+    }
 }

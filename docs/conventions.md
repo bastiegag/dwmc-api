@@ -86,7 +86,7 @@ This is non-negotiable — it prevents users from reading or modifying each othe
 ```typescript
 // ✅ Always scope to the authenticated user
 prisma.transaction.findMany({
-  where: { userProfileId: profile.id },
+    where: { userProfileId: profile.id },
 })
 
 // ❌ Never query without a user filter on user-owned tables
