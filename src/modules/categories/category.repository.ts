@@ -1,18 +1,24 @@
-import type { Prisma } from '@prisma/client'
+import { Prisma } from '@prisma/client'
 import { prisma } from '../../db/prisma.js'
 
 export async function findManyByUserProfileId(
   userProfileId: string,
-  options: { includeArchived: boolean; sectionId?: string },
+  options: { includeArchived: boolean; sectionId?: string; cursor?: string; limit: number },
 ) {
-  return prisma.category.findMany({
+  const items = await prisma.category.findMany({
     where: {
       userProfileId,
       ...(options.includeArchived ? {} : { isArchived: false }),
       ...(options.sectionId ? { sectionId: options.sectionId } : {}),
     },
     orderBy: { name: 'asc' },
+    take: options.limit + 1,
+    ...(options.cursor ? { cursor: { id: options.cursor }, skip: 1 } : {}),
   })
+
+  const hasNextPage = items.length > options.limit
+  const data = hasNextPage ? items.slice(0, options.limit) : items
+  return { items: data, nextCursor: hasNextPage ? data[data.length - 1].id : null }
 }
 
 export async function findByIdForUser(id: string, userProfileId: string) {
@@ -40,25 +46,31 @@ export async function updateForUser(
   userProfileId: string,
   data: Prisma.CategoryUpdateInput,
 ) {
-  await prisma.category.updateMany({
-    where: { id, userProfileId },
-    data,
-  })
-
-  return prisma.category.findFirst({
-    where: { id, userProfileId },
-  })
+  try {
+    return await prisma.category.update({
+      where: { id, userProfileId },
+      data,
+    })
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025') {
+      return null
+    }
+    throw e
+  }
 }
 
 export async function archiveForUser(id: string, userProfileId: string) {
-  await prisma.category.updateMany({
-    where: { id, userProfileId },
-    data: { isArchived: true },
-  })
-
-  return prisma.category.findFirst({
-    where: { id, userProfileId },
-  })
+  try {
+    return await prisma.category.update({
+      where: { id, userProfileId },
+      data: { isArchived: true },
+    })
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025') {
+      return null
+    }
+    throw e
+  }
 }
 
 export async function findDuplicateByNameInSection(

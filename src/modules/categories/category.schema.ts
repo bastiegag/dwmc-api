@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { paginationSchema } from '../../shared/validation/pagination.js'
 
 const queryBooleanSchema = z
   .enum(['true', 'false'])
@@ -22,10 +23,12 @@ export const categoryParamsSchema = z.object({
   id: z.string().min(1),
 })
 
-export const getCategoriesQuerySchema = z.object({
-  includeArchived: queryBooleanSchema,
-  sectionId: z.string().min(1).optional(),
-})
+export const getCategoriesQuerySchema = z
+  .object({
+    includeArchived: queryBooleanSchema,
+    sectionId: z.string().min(1).optional(),
+  })
+  .merge(paginationSchema)
 
 export type CreateCategoryInput = z.infer<typeof createCategorySchema>
 export type UpdateCategoryInput = z.infer<typeof updateCategorySchema>

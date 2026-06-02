@@ -10,7 +10,11 @@ import {
   findManyByUserProfileId,
   updateForUser,
 } from './section.repository.js'
-import type { CreateSectionInput, GetSectionsQueryInput, UpdateSectionInput } from './section.schema.js'
+import type {
+  CreateSectionInput,
+  GetSectionsQueryInput,
+  UpdateSectionInput,
+} from './section.schema.js'
 
 export async function listSections(authUser: AuthUser, query: GetSectionsQueryInput) {
   const profile = await getOrCreateUserProfile(authUser)
@@ -19,6 +23,8 @@ export async function listSections(authUser: AuthUser, query: GetSectionsQueryIn
     includeArchived: query.includeArchived,
     includeCategories: query.includeCategories,
     includeCategoryArchived: query.includeArchived,
+    cursor: query.cursor,
+    limit: query.limit,
   })
 }
 

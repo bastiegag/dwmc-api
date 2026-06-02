@@ -29,6 +29,8 @@ export async function listCategories(authUser: AuthUser, query: GetCategoriesQue
   return findManyByUserProfileId(profile.id, {
     includeArchived: query.includeArchived,
     sectionId: query.sectionId,
+    cursor: query.cursor,
+    limit: query.limit,
   })
 }
 

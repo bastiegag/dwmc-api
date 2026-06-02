@@ -1,8 +1,11 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { app } from '../app.js'
 import { prisma } from '../db/prisma.js'
 import { supabase } from '../lib/supabase.js'
+
+type SuccessBody<T> = { data: T }
+type PaginatedBody<T> = { data: T[]; nextCursor: string | null }
+type ErrorBody = { error: { code: string; message: string } }
 
 vi.mock('../lib/supabase.js', () => ({
   supabase: {
@@ -86,8 +89,9 @@ function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T
 }
 
+/* eslint-disable @typescript-eslint/no-explicit-any -- Vitest/Prisma mock interop */
 function configureSupabaseMock() {
-  (supabase.auth.getUser as any).mockImplementation(async (token: string) => {
+  ;(supabase.auth.getUser as any).mockImplementation(async (token: string) => {
     if (token === TOKEN_USER_1) {
       return {
         data: { user: { id: 'auth-user-1', email: 'user1@example.com' } as any },
@@ -110,7 +114,7 @@ function configureSupabaseMock() {
 }
 
 function configurePrismaMocks() {
-  (prisma.userProfile.upsert as any).mockImplementation(async ({ where, update, create }: any) => {
+  ;(prisma.userProfile.upsert as any).mockImplementation(async ({ where, update, create }: any) => {
     const existing = profilesByAuthUserId.get(where.authUserId)
     if (existing) {
       const next = {
@@ -135,39 +139,52 @@ function configurePrismaMocks() {
     }
     profilesByAuthUserId.set(where.authUserId, profile)
     return clone(profile)
-  });
+  })
+  ;(prisma.section.findMany as any).mockImplementation(
+    async ({ where, include, orderBy, take, cursor, skip }: any) => {
+      let result = sections.filter((section) => section.userProfileId === where.userProfileId)
 
-  (prisma.section.findMany as any).mockImplementation(async ({ where, include, orderBy }: any) => {
-    let result = sections.filter((section) => section.userProfileId === where.userProfileId)
+      if (where.isArchived !== undefined) {
+        result = result.filter((section) => section.isArchived === where.isArchived)
+      }
 
-    if (where.isArchived !== undefined) {
-      result = result.filter((section) => section.isArchived === where.isArchived)
-    }
+      if (orderBy?.name === 'asc') {
+        result = [...result].sort((a, b) => a.name.localeCompare(b.name))
+      }
 
-    if (orderBy?.name === 'asc') {
-      result = [...result].sort((a, b) => a.name.localeCompare(b.name))
-    }
-
-    if (!include?.categories) {
-      return clone(result)
-    }
-
-    return clone(
-      result.map((section) => {
-        let nested = categories.filter((category) => category.sectionId === section.id)
-        if (include.categories.where?.isArchived !== undefined) {
-          nested = nested.filter((category) => category.isArchived === include.categories.where.isArchived)
+      if (cursor?.id) {
+        const idx = result.findIndex((item) => item.id === cursor.id)
+        if (idx >= 0) {
+          result = result.slice(idx + (skip ?? 0))
         }
-        if (include.categories.orderBy?.name === 'asc') {
-          nested = [...nested].sort((a, b) => a.name.localeCompare(b.name))
-        }
+      }
 
-        return { ...section, categories: nested }
-      }),
-    )
-  });
+      if (take !== undefined) {
+        result = result.slice(0, take)
+      }
 
-  (prisma.section.findFirst as any).mockImplementation(async ({ where, include }: any) => {
+      if (!include?.categories) {
+        return clone(result)
+      }
+
+      return clone(
+        result.map((section) => {
+          let nested = categories.filter((category) => category.sectionId === section.id)
+          if (include.categories.where?.isArchived !== undefined) {
+            nested = nested.filter(
+              (category) => category.isArchived === include.categories.where.isArchived,
+            )
+          }
+          if (include.categories.orderBy?.name === 'asc') {
+            nested = [...nested].sort((a, b) => a.name.localeCompare(b.name))
+          }
+
+          return { ...section, categories: nested }
+        }),
+      )
+    },
+  )
+  ;(prisma.section.findFirst as any).mockImplementation(async ({ where, include }: any) => {
     const result = sections.filter((section) => {
       if (where.id && section.id !== where.id) {
         return false
@@ -195,13 +212,14 @@ function configurePrismaMocks() {
 
     let nested = categories.filter((category) => category.sectionId === found.id)
     if (include.categories.where?.isArchived !== undefined) {
-      nested = nested.filter((category) => category.isArchived === include.categories.where.isArchived)
+      nested = nested.filter(
+        (category) => category.isArchived === include.categories.where.isArchived,
+      )
     }
 
     return clone({ ...found, categories: nested })
-  });
-
-  (prisma.section.create as any).mockImplementation(async ({ data }: any) => {
+  })
+  ;(prisma.section.create as any).mockImplementation(async ({ data }: any) => {
     const now = new Date()
     const section: Section = {
       id: `section-${sectionCounter++}`,
@@ -215,9 +233,8 @@ function configurePrismaMocks() {
 
     sections.push(section)
     return clone(section)
-  });
-
-  (prisma.section.update as any).mockImplementation(async ({ where, data }: any) => {
+  })
+  ;(prisma.section.update as any).mockImplementation(async ({ where, data }: any) => {
     const index = sections.findIndex((section) => section.id === where.id)
     if (index < 0) {
       throw new Error('Section not found')
@@ -234,9 +251,8 @@ function configurePrismaMocks() {
 
     sections[index] = next
     return clone(next)
-  });
-
-  (prisma.section.updateMany as any).mockImplementation(async ({ where, data }: any) => {
+  })
+  ;(prisma.section.updateMany as any).mockImplementation(async ({ where, data }: any) => {
     let count = 0
     sections = sections.map((section) => {
       if (section.id !== where.id || section.userProfileId !== where.userProfileId) {
@@ -254,12 +270,14 @@ function configurePrismaMocks() {
     })
 
     return { count }
-  });
-
-  (prisma.category.updateMany as any).mockImplementation(async ({ where, data }: any) => {
+  })
+  ;(prisma.category.updateMany as any).mockImplementation(async ({ where, data }: any) => {
     let count = 0
     categories = categories.map((category) => {
-      if (category.sectionId !== where.sectionId || category.userProfileId !== where.userProfileId) {
+      if (
+        category.sectionId !== where.sectionId ||
+        category.userProfileId !== where.userProfileId
+      ) {
         return category
       }
 
@@ -274,6 +292,7 @@ function configurePrismaMocks() {
     return { count }
   })
 }
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 describe('Sections API', () => {
   beforeEach(() => {
@@ -308,8 +327,8 @@ describe('Sections API', () => {
       body: JSON.stringify({ name: '', color: '' }),
     })
 
-    expect(res.status).toBe(400)
-    const body: any = await res.json()
+    expect(res.status).toBe(422)
+    const body = (await res.json()) as ErrorBody
     expect(body.error.code).toBe('VALIDATION_ERROR')
   })
 
@@ -324,7 +343,7 @@ describe('Sections API', () => {
     })
 
     expect(res.status).toBe(201)
-    const body: any = await res.json()
+    const body = (await res.json()) as SuccessBody<Section>
     expect(body.data.name).toBe('Food')
   })
 
@@ -348,7 +367,7 @@ describe('Sections API', () => {
     })
 
     expect(res.status).toBe(409)
-    const body: any = await res.json()
+    const body = (await res.json()) as ErrorBody
     expect(body.error.code).toBe('CONFLICT')
   })
 
@@ -376,7 +395,7 @@ describe('Sections API', () => {
     })
 
     expect(res.status).toBe(200)
-    const body: any = await res.json()
+    const body = (await res.json()) as PaginatedBody<Section>
     expect(body.data).toHaveLength(1)
     expect(body.data[0].name).toBe('Food')
   })
@@ -390,7 +409,7 @@ describe('Sections API', () => {
       },
       body: JSON.stringify({ name: 'Home', color: '#3b82f6' }),
     })
-    const created: any = await createRes.json()
+    const created = (await createRes.json()) as SuccessBody<Section>
 
     const res = await app.request(`/api/v1/sections/${created.data.id}`, {
       headers: authHeader(TOKEN_USER_1),
@@ -408,7 +427,7 @@ describe('Sections API', () => {
       },
       body: JSON.stringify({ name: 'Food', color: '#22c55e' }),
     })
-    const created: any = await createRes.json()
+    const created = (await createRes.json()) as SuccessBody<Section>
 
     const res = await app.request(`/api/v1/sections/${created.data.id}`, {
       method: 'PATCH',
@@ -420,7 +439,7 @@ describe('Sections API', () => {
     })
 
     expect(res.status).toBe(200)
-    const body: any = await res.json()
+    const body = (await res.json()) as SuccessBody<Section>
     expect(body.data.name).toBe('Food Updated')
 
     const otherUserRes = await app.request(`/api/v1/sections/${created.data.id}`, {
@@ -443,7 +462,7 @@ describe('Sections API', () => {
       },
       body: JSON.stringify({ name: 'Food', color: '#22c55e' }),
     })
-    const created: any = await createRes.json()
+    const created = (await createRes.json()) as SuccessBody<Section>
 
     const res = await app.request(`/api/v1/sections/${created.data.id}`, {
       method: 'DELETE',
@@ -451,7 +470,7 @@ describe('Sections API', () => {
     })
 
     expect(res.status).toBe(200)
-    const body: any = await res.json()
+    const body = (await res.json()) as SuccessBody<Section>
     expect(body.data.isArchived).toBe(true)
   })
 
@@ -464,7 +483,7 @@ describe('Sections API', () => {
       },
       body: JSON.stringify({ name: 'Food', color: '#22c55e' }),
     })
-    const created: any = await createRes.json()
+    const created = (await createRes.json()) as SuccessBody<Section>
 
     await app.request(`/api/v1/sections/${created.data.id}`, {
       method: 'DELETE',
@@ -474,7 +493,7 @@ describe('Sections API', () => {
     const res = await app.request('/api/v1/sections', {
       headers: authHeader(TOKEN_USER_1),
     })
-    const body: any = await res.json()
+    const body = (await res.json()) as PaginatedBody<Section>
 
     expect(body.data).toHaveLength(0)
   })
@@ -488,7 +507,7 @@ describe('Sections API', () => {
       },
       body: JSON.stringify({ name: 'Food', color: '#22c55e' }),
     })
-    const created: any = await createRes.json()
+    const created = (await createRes.json()) as SuccessBody<Section>
 
     await app.request(`/api/v1/sections/${created.data.id}`, {
       method: 'DELETE',
@@ -498,7 +517,7 @@ describe('Sections API', () => {
     const res = await app.request('/api/v1/sections?includeArchived=true', {
       headers: authHeader(TOKEN_USER_1),
     })
-    const body: any = await res.json()
+    const body = (await res.json()) as PaginatedBody<Section>
 
     expect(body.data).toHaveLength(1)
     expect(body.data[0].isArchived).toBe(true)
@@ -513,7 +532,7 @@ describe('Sections API', () => {
       },
       body: JSON.stringify({ name: 'Food', color: '#22c55e' }),
     })
-    const created: any = await createRes.json()
+    const created = (await createRes.json()) as SuccessBody<Section>
 
     const profile = profilesByAuthUserId.get('auth-user-1')
     if (!profile) {
@@ -534,7 +553,7 @@ describe('Sections API', () => {
     const res = await app.request('/api/v1/sections?includeCategories=true', {
       headers: authHeader(TOKEN_USER_1),
     })
-    const body: any = await res.json()
+    const body = (await res.json()) as PaginatedBody<Section & { categories: Category[] }>
 
     expect(body.data[0].categories).toHaveLength(1)
     expect(body.data[0].categories[0].name).toBe('Groceries')
@@ -549,7 +568,7 @@ describe('Sections API', () => {
       },
       body: JSON.stringify({ name: 'Food', color: '#22c55e' }),
     })
-    const created: any = await createRes.json()
+    const created = (await createRes.json()) as SuccessBody<Section>
 
     const profile = profilesByAuthUserId.get('auth-user-1')
     if (!profile) {
@@ -582,7 +601,7 @@ describe('Sections API', () => {
     const res = await app.request('/api/v1/sections?includeCategories=true', {
       headers: authHeader(TOKEN_USER_1),
     })
-    const body: any = await res.json()
+    const body = (await res.json()) as PaginatedBody<Section & { categories: Category[] }>
 
     expect(body.data[0].categories).toHaveLength(1)
     expect(body.data[0].categories[0].name).toBe('Groceries')
