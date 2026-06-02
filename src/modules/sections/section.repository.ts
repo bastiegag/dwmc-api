@@ -35,7 +35,8 @@ export async function findManyByUserProfileId(
 
     const hasNextPage = items.length > options.limit
     const data = hasNextPage ? items.slice(0, options.limit) : items
-    return { items: data, nextCursor: hasNextPage ? data[data.length - 1].id : null }
+    const lastId = data.at(-1)?.id ?? null
+    return { items: data, nextCursor: hasNextPage ? lastId : null }
 }
 
 export async function findByIdForUser(

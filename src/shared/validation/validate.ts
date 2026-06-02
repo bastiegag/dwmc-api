@@ -1,5 +1,5 @@
 import type { Context } from 'hono'
-import type { ZodSchema } from 'zod'
+import type { ZodSchema, ZodType, ZodTypeDef } from 'zod'
 import { AppError, ErrorCodes } from '../errors/AppError.js'
 
 /**
@@ -7,7 +7,10 @@ import { AppError, ErrorCodes } from '../errors/AppError.js'
  * Throws an AppError (VALIDATION_ERROR) if validation fails.
  * Use this for params and query strings; use validateBody for request bodies.
  */
-export function parseOrThrow<T>(schema: ZodSchema<T>, input: unknown): T {
+export function parseOrThrow<Input, Output>(
+    schema: ZodType<Output, ZodTypeDef, Input>,
+    input: Input,
+): Output {
     const result = schema.safeParse(input)
     if (!result.success) {
         throw new AppError(
