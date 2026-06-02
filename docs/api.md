@@ -32,14 +32,14 @@ All responses use a consistent JSON envelope.
 
 ### Error codes
 
-| Code | HTTP status | Description |
-|---|---|---|
-| `UNAUTHORIZED` | 401 | Missing, invalid, or expired token |
-| `FORBIDDEN` | 403 | Authenticated but not permitted |
-| `NOT_FOUND` | 404 | Resource does not exist |
-| `VALIDATION_ERROR` | 400/422 | Request body or params failed validation |
-| `CONFLICT` | 409 | Resource already exists |
-| `INTERNAL_SERVER_ERROR` | 500 | Unexpected server error |
+| Code                    | HTTP status | Description                              |
+| ----------------------- | ----------- | ---------------------------------------- |
+| `UNAUTHORIZED`          | 401         | Missing, invalid, or expired token       |
+| `FORBIDDEN`             | 403         | Authenticated but not permitted          |
+| `NOT_FOUND`             | 404         | Resource does not exist                  |
+| `VALIDATION_ERROR`      | 400/422     | Request body or params failed validation |
+| `CONFLICT`              | 409         | Resource already exists                  |
+| `INTERNAL_SERVER_ERROR` | 500         | Unexpected server error                  |
 
 ---
 
@@ -52,6 +52,7 @@ Liveness check — returns 200 as long as the process is alive.
 **Auth:** none
 
 **Response 200**
+
 ```json
 {
   "data": {
@@ -69,6 +70,7 @@ Readiness check — pings the database to confirm connectivity.
 **Auth:** none
 
 **Response 200**
+
 ```json
 {
   "data": {
@@ -79,6 +81,7 @@ Readiness check — pings the database to confirm connectivity.
 ```
 
 **Response 503**
+
 ```json
 {
   "error": {
@@ -98,6 +101,7 @@ Creates or updates the profile on every call to stay in sync with Supabase Auth.
 **Auth:** required — JWT token in Authorization header
 
 **Response 200**
+
 ```json
 {
   "data": {
@@ -127,10 +131,12 @@ Returns sections for the authenticated user.
 **Auth:** required — JWT token in Authorization header
 
 **Query params**
+
 - `includeArchived=true|false` (default: `false`)
 - `includeCategories=true|false` (default: `false`)
 
 **Response 200**
+
 ```json
 {
   "data": [
@@ -155,6 +161,7 @@ Creates a section for the authenticated user.
 **Auth:** required — JWT token in Authorization header
 
 **Request body**
+
 ```json
 {
   "name": "Food",
@@ -163,6 +170,7 @@ Creates a section for the authenticated user.
 ```
 
 **Response 201**
+
 ```json
 {
   "data": {
@@ -175,6 +183,7 @@ Creates a section for the authenticated user.
 ```
 
 **Errors**
+
 - `VALIDATION_ERROR` (400)
 - `CONFLICT` (409)
 
@@ -187,9 +196,11 @@ Returns one section owned by the authenticated user.
 **Auth:** required — JWT token in Authorization header
 
 **Query params**
+
 - `includeCategories=true|false` (default: `false`)
 
 **Errors**
+
 - `NOT_FOUND` (404)
 
 ---
@@ -201,6 +212,7 @@ Updates one section owned by the authenticated user.
 **Auth:** required — JWT token in Authorization header
 
 **Request body**
+
 ```json
 {
   "name": "Home",
@@ -210,6 +222,7 @@ Updates one section owned by the authenticated user.
 ```
 
 **Errors**
+
 - `VALIDATION_ERROR` (400)
 - `CONFLICT` (409)
 - `NOT_FOUND` (404)
@@ -223,6 +236,7 @@ Soft-deletes a section (`isArchived = true`) and archives all categories in that
 **Auth:** required — JWT token in Authorization header
 
 **Errors**
+
 - `NOT_FOUND` (404)
 
 ---
@@ -234,12 +248,14 @@ Returns categories for the authenticated user.
 **Auth:** required — JWT token in Authorization header
 
 **Query params**
+
 - `includeArchived=true|false` (default: `false`)
 - `sectionId=<sectionId>` (optional)
 
 If `sectionId` is provided and does not belong to the authenticated user, returns `VALIDATION_ERROR` (400).
 
 **Response 200**
+
 ```json
 {
   "data": [
@@ -265,6 +281,7 @@ Creates a category for the authenticated user.
 **Auth:** required — JWT token in Authorization header
 
 **Request body**
+
 ```json
 {
   "name": "Groceries",
@@ -274,6 +291,7 @@ Creates a category for the authenticated user.
 ```
 
 **Response 201**
+
 ```json
 {
   "data": {
@@ -287,6 +305,7 @@ Creates a category for the authenticated user.
 ```
 
 **Errors**
+
 - `VALIDATION_ERROR` (400)
 - `CONFLICT` (409)
 
@@ -299,6 +318,7 @@ Returns one category owned by the authenticated user.
 **Auth:** required — JWT token in Authorization header
 
 **Errors**
+
 - `NOT_FOUND` (404)
 
 ---
@@ -310,6 +330,7 @@ Updates one category owned by the authenticated user.
 **Auth:** required — JWT token in Authorization header
 
 **Request body**
+
 ```json
 {
   "name": "Restaurants",
@@ -320,6 +341,7 @@ Updates one category owned by the authenticated user.
 ```
 
 **Errors**
+
 - `VALIDATION_ERROR` (400)
 - `CONFLICT` (409)
 - `NOT_FOUND` (404)
@@ -333,4 +355,5 @@ Soft-deletes a category (`isArchived = true`).
 **Auth:** required — JWT token in Authorization header
 
 **Errors**
+
 - `NOT_FOUND` (404)

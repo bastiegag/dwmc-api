@@ -2,16 +2,16 @@
 
 ## Naming
 
-| Thing | Convention | Example |
-|---|---|---|
-| Files | `kebab-case` | `auth.middleware.ts` |
-| Classes | `PascalCase` | `AppError` |
-| Functions / variables | `camelCase` | `getOrCreateUserProfile` |
-| Types / interfaces | `PascalCase` | `AuthUser`, `AppBindings` |
-| Zod schemas | `camelCase` + `Schema` suffix | `authUserSchema` |
-| Route files | `<module>.routes.ts` | `auth.routes.ts` |
-| Service files | `<module>.service.ts` | `auth.service.ts` |
-| Repository files | `<module>.repository.ts` | `transaction.repository.ts` |
+| Thing                 | Convention                    | Example                     |
+| --------------------- | ----------------------------- | --------------------------- |
+| Files                 | `kebab-case`                  | `auth.middleware.ts`        |
+| Classes               | `PascalCase`                  | `AppError`                  |
+| Functions / variables | `camelCase`                   | `getOrCreateUserProfile`    |
+| Types / interfaces    | `PascalCase`                  | `AuthUser`, `AppBindings`   |
+| Zod schemas           | `camelCase` + `Schema` suffix | `authUserSchema`            |
+| Route files           | `<module>.routes.ts`          | `auth.routes.ts`            |
+| Service files         | `<module>.service.ts`         | `auth.service.ts`           |
+| Repository files      | `<module>.repository.ts`      | `transaction.repository.ts` |
 
 ---
 

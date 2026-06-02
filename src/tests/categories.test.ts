@@ -428,7 +428,7 @@ describe('Categories API', () => {
     expect(res.status).toBe(200)
     const body = (await res.json()) as PaginatedBody<Category>
     expect(body.data).toHaveLength(1)
-    expect(body.data[0].name).toBe('Groceries')
+    expect(body.data[0]!.name).toBe('Groceries')
   })
 
   it('filtering categories by sectionId works', async () => {
@@ -459,7 +459,7 @@ describe('Categories API', () => {
 
     const body = (await res.json()) as PaginatedBody<Category>
     expect(body.data).toHaveLength(1)
-    expect(body.data[0].sectionId).toBe(foodSection.id)
+    expect(body.data[0]!.sectionId).toBe(foodSection.id)
   })
 
   it("filtering by another user's sectionId returns VALIDATION_ERROR (400)", async () => {
@@ -655,6 +655,6 @@ describe('Categories API', () => {
 
     const body = (await res.json()) as PaginatedBody<Category>
     expect(body.data).toHaveLength(1)
-    expect(body.data[0].isArchived).toBe(true)
+    expect(body.data[0]!.isArchived).toBe(true)
   })
 })

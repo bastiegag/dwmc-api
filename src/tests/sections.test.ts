@@ -397,7 +397,7 @@ describe('Sections API', () => {
     expect(res.status).toBe(200)
     const body = (await res.json()) as PaginatedBody<Section>
     expect(body.data).toHaveLength(1)
-    expect(body.data[0].name).toBe('Food')
+    expect(body.data[0]!.name).toBe('Food')
   })
 
   it("GET /api/v1/sections/:id returns 404 for another user's section", async () => {
@@ -520,7 +520,7 @@ describe('Sections API', () => {
     const body = (await res.json()) as PaginatedBody<Section>
 
     expect(body.data).toHaveLength(1)
-    expect(body.data[0].isArchived).toBe(true)
+    expect(body.data[0]!.isArchived).toBe(true)
   })
 
   it('includeCategories=true includes categories', async () => {
@@ -555,8 +555,8 @@ describe('Sections API', () => {
     })
     const body = (await res.json()) as PaginatedBody<Section & { categories: Category[] }>
 
-    expect(body.data[0].categories).toHaveLength(1)
-    expect(body.data[0].categories[0].name).toBe('Groceries')
+    expect(body.data[0]!.categories).toHaveLength(1)
+    expect(body.data[0]!.categories[0]!.name).toBe('Groceries')
   })
 
   it('archived categories are excluded by default when including categories', async () => {
@@ -603,7 +603,7 @@ describe('Sections API', () => {
     })
     const body = (await res.json()) as PaginatedBody<Section & { categories: Category[] }>
 
-    expect(body.data[0].categories).toHaveLength(1)
-    expect(body.data[0].categories[0].name).toBe('Groceries')
+    expect(body.data[0]!.categories).toHaveLength(1)
+    expect(body.data[0]!.categories[0]!.name).toBe('Groceries')
   })
 })

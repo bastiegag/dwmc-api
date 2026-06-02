@@ -93,11 +93,13 @@ npm test
 ```
 
 To compile to `dist/`:
+
 ```bash
 npm run build
 ```
 
 To auto-fix lint and format issues:
+
 ```bash
 npm run lint:fix
 npm run format
@@ -123,12 +125,14 @@ After modifying `prisma/schema.prisma`, always run `npm run db:generate` (or `np
 ## Architecture & Conventions
 
 **Module structure** — every domain module in `src/modules/<name>/` has exactly four files:
+
 - `<name>.routes.ts` — thin Hono router; validates input, calls service, returns response
 - `<name>.schema.ts` — Zod schemas and inferred types
 - `<name>.service.ts` — business logic; throws `AppError`; never raw Prisma/Supabase errors
 - `<name>.repository.ts` — Prisma queries only; always scoped by `userProfileId`
 
 **To add a new module:**
+
 1. Create `src/modules/<name>/` with the four files above.
 2. Register the router in `src/app.ts`: `app.route('/api/v1/<name>', <name>Routes)`
 3. Protect routes with `authMiddleware`.
@@ -136,6 +140,7 @@ After modifying `prisma/schema.prisma`, always run `npm run db:generate` (or `np
 5. Run `npm run db:migrate` and `npm run db:generate`.
 
 **Error handling:**
+
 - Always throw `new AppError('NOT_FOUND' | 'UNAUTHORIZED' | 'FORBIDDEN' | 'VALIDATION_ERROR' | 'CONFLICT' | 'INTERNAL_SERVER_ERROR', message, statusCode)`.
 - Never let Prisma or Supabase errors propagate raw to the client.
 - The central handler in `src/shared/errors/error-handler.ts` converts `AppError` to the standard envelope.
@@ -151,6 +156,7 @@ After modifying `prisma/schema.prisma`, always run `npm run db:generate` (or `np
 **TypeScript:** strict mode is on. Use `import type { … }` for type-only imports. Avoid `as any` outside test files. `noUncheckedIndexedAccess` is enabled — array/map accesses may be `T | undefined`.
 
 **Naming:**
+
 - Files: `kebab-case` (e.g. `auth.middleware.ts`)
 - Classes/Types/Interfaces: `PascalCase`
 - Functions/Variables: `camelCase`

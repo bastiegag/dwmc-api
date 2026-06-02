@@ -26,12 +26,12 @@ protected request and identify the authenticated user.
 
 ## Supabase Auth vs local UserProfile
 
-| | Supabase Auth user | Local UserProfile |
-|---|---|---|
-| **Stored where** | Supabase Auth database | Local PostgreSQL |
-| **Manages** | Identity, login, sessions, MFA | App-specific data (currency, locale, name) |
-| **Identified by** | `user.id` (UUID) | `profile.authUserId` (same UUID) |
-| **Created by** | Supabase on sign-up | Backend on first `/auth/me` call |
+|                   | Supabase Auth user             | Local UserProfile                          |
+| ----------------- | ------------------------------ | ------------------------------------------ |
+| **Stored where**  | Supabase Auth database         | Local PostgreSQL                           |
+| **Manages**       | Identity, login, sessions, MFA | App-specific data (currency, locale, name) |
+| **Identified by** | `user.id` (UUID)               | `profile.authUserId` (same UUID)           |
+| **Created by**    | Supabase on sign-up            | Backend on first `/auth/me` call           |
 
 The `UserProfile.authUserId` field is the bridge between the two systems. All future
 business tables (transactions, budgets, …) reference `UserProfile.id`.
@@ -43,6 +43,7 @@ business tables (transactions, budgets, …) reference `UserProfile.id`.
 `src/lib/supabase.ts` creates a single Supabase client using `SUPABASE_SERVICE_ROLE_KEY`.
 
 This key:
+
 - Allows the backend to call `supabase.auth.getUser(token)` to validate JWTs server-side.
 - Bypasses Row Level Security — use it **only on the backend**, never expose it to the browser.
 
@@ -58,6 +59,7 @@ authRoutes.get('/me', authMiddleware, handler)
 ```
 
 The middleware:
+
 1. Reads the `Authorization` header.
 2. Verifies it starts with `Bearer `
 3. Calls `supabase.auth.getUser(token)`.
@@ -86,7 +88,7 @@ import { authMiddleware } from '../auth/auth.middleware.js'
 const transactionRoutes = new Hono<AppBindings>()
 
 transactionRoutes.get('/', authMiddleware, async (c) => {
-  const authUser = c.get('authUser')  // typed: { id: string, email?: string }
+  const authUser = c.get('authUser') // typed: { id: string, email?: string }
   // fetch data scoped to authUser.id …
 })
 ```
@@ -96,6 +98,7 @@ transactionRoutes.get('/', authMiddleware, async (c) => {
 ## Supabase Auth features (frontend only)
 
 The frontend uses the Supabase JS client to handle:
+
 - Sign up
 - Sign in (email/password, OAuth, magic link, …)
 - Forgot password / reset password

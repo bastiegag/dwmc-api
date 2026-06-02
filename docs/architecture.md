@@ -8,6 +8,7 @@ logic, and database queries. Shared infrastructure (error handling, response for
 logging) lives in `src/shared/`.
 
 This structure makes it easy to:
+
 - Reason about a feature in one place.
 - Add a new module without touching existing modules.
 - Delete a module cleanly if requirements change.
@@ -34,12 +35,12 @@ HTTP response
 
 ## Layer responsibilities
 
-| Layer | File pattern | Responsibility |
-|---|---|---|
-| **Route** | `*.routes.ts` | Declare endpoints, apply middleware, delegate to service, return response. Stays thin — no business logic. |
-| **Schema** | `*.schema.ts` | Zod schemas for request bodies, query params, and response shapes. |
-| **Service** | `*.service.ts` | Business logic — orchestrates repositories, enforces rules, raises AppErrors. |
-| **Repository** | `*.repository.ts` | Prisma queries only — no business logic, no HTTP concerns. |
+| Layer          | File pattern      | Responsibility                                                                                             |
+| -------------- | ----------------- | ---------------------------------------------------------------------------------------------------------- |
+| **Route**      | `*.routes.ts`     | Declare endpoints, apply middleware, delegate to service, return response. Stays thin — no business logic. |
+| **Schema**     | `*.schema.ts`     | Zod schemas for request bodies, query params, and response shapes.                                         |
+| **Service**    | `*.service.ts`    | Business logic — orchestrates repositories, enforces rules, raises AppErrors.                              |
+| **Repository** | `*.repository.ts` | Prisma queries only — no business logic, no HTTP concerns.                                                 |
 
 ---
 
