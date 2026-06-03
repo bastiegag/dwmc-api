@@ -22,7 +22,7 @@ HTTP request
   → CORS middleware
   → Request logger
   → Route match
-      → Zod validation (validateBody / query params)
+      → Zod validation (`validateBody` for request bodies, `parseOrThrow` for params and query)
       → Auth middleware (protected routes only)
       → Service layer  (business logic)
           → Repository  (Prisma queries)
@@ -97,6 +97,23 @@ prisma.transaction.findMany({ where: { userProfileId: profile.id } })
 
 // ❌ Wrong — never query without a user filter
 prisma.transaction.findMany()
+```
+
+---
+
+## Cursor-based pagination
+
+List endpoints use a cursor-based pagination scheme implemented in `src/shared/validation/pagination.ts` and returned with `paginatedResponse`.
+
+- Query params: `cursor` (optional string id) and `limit` (number, default 50, min 1, max 100).
+- The server returns `{ data: [...], nextCursor: string | null }`. When `nextCursor` is `null` there are no further pages.
+- Clients should pass `cursor=<lastItemId>` to fetch the next page.
+
+Example server-side usage in a route handler:
+
+```typescript
+const result = await listSections(authUser, query)
+return c.json(paginatedResponse(result.items, result.nextCursor))
 ```
 
 ---

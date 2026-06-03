@@ -53,12 +53,15 @@ src/
     errors/error-handler.ts    # Central Hono onError handler
     http/api-response.ts       # successResponse / errorResponse helpers
     validation/validate.ts     # Reusable Zod body validator
+    validation/pagination.ts   # Cursor-based pagination schema
     logger/request-logger.ts   # Request/response logger middleware
   tests/
     setup.ts             # Sets env vars so tests run without a real .env
     health.test.ts
     readiness.test.ts
     auth.test.ts
+    sections.test.ts
+    categories.test.ts
     error-handler.test.ts
 docs/
   architecture.md        # Request lifecycle, layer responsibilities, how to add a module
@@ -90,6 +93,15 @@ npm run format:check
 
 # 5. Run tests — no database required, all external deps are mocked
 npm test
+
+Optional / helpful scripts:
+```
+
+npm run test:watch
+npm run test:coverage
+
+```
+
 ```
 
 To compile to `dist/`:
@@ -116,6 +128,13 @@ docker compose up -d          # Start PostgreSQL
 npm run db:migrate             # Run pending Prisma migrations
 npm run db:generate            # Regenerate Prisma client after schema changes
 npm run db:seed                # Seed dev data
+```
+
+You can also use these database helper scripts:
+
+```bash
+npm run db:studio   # Open Prisma Studio
+npm run db:reset    # Reset DB (migrate reset)
 ```
 
 After modifying `prisma/schema.prisma`, always run `npm run db:generate` (or `npm run db:migrate` for a new migration) before building or type-checking.
@@ -147,6 +166,8 @@ After modifying `prisma/schema.prisma`, always run `npm run db:generate` (or `np
 
 **API responses:** always use `successResponse(data)` and `errorResponse(code, message)` from `src/shared/http/api-response.ts`. Never construct raw `{ data: … }` or `{ error: … }` objects.
 
+For list endpoints use `paginatedResponse(items, nextCursor)` which returns the envelope `{ data, nextCursor }`.
+
 **User data scoping:** every query on user-owned tables **must** include `where: { userProfileId: profile.id }`. Never query without this filter.
 
 **Soft delete:** use `isArchived: true` instead of hard deletes. Archiving a Section also archives its child Categories.
@@ -154,6 +175,8 @@ After modifying `prisma/schema.prisma`, always run `npm run db:generate` (or `np
 **Environment variables:** never read `process.env` directly in application code. All env access goes through `src/config/env.ts`.
 
 **TypeScript:** strict mode is on. Use `import type { … }` for type-only imports. Avoid `as any` outside test files. `noUncheckedIndexedAccess` is enabled — array/map accesses may be `T | undefined`.
+
+The project `tsconfig.json` also enables `noImplicitOverride` and `noImplicitReturns`.
 
 **Naming:**
 
@@ -163,5 +186,10 @@ After modifying `prisma/schema.prisma`, always run `npm run db:generate` (or `np
 - Zod schemas: `camelCase` + `Schema` suffix (e.g. `createSectionSchema`)
 
 **Prettier config:** no semicolons, single quotes, trailing commas, print width 100, tab width 2.
+
+**Validation helpers:**
+
+- Use `validateBody(c, schema)` to validate JSON request bodies.
+- Use `parseOrThrow(schema, input)` to validate URL params and query strings (throws `VALIDATION_ERROR` `AppError` on failure).
 
 **Testing:** mock Prisma and Supabase with `vi.mock()` per test file. Use `vi.clearAllMocks()` in `beforeEach`. Test files live in `src/tests/`. Test the HTTP layer (status codes, response shapes). Skip any tests requiring a live Supabase token with `it.skip` and add a comment explaining the requirement.

@@ -43,6 +43,26 @@ All responses use a consistent JSON envelope.
 
 ---
 
+## Pagination
+
+List endpoints use cursor-based pagination. Responses for paginated endpoints return the standard envelope with an additional `nextCursor` field set to a string id when more pages exist or `null` when the page is the last one.
+
+Query params used by paginated endpoints:
+
+- `cursor=<id>` (optional) — id of the last item from the previous page
+- `limit=<number>` (optional, default: `50`, min: `1`, max: `100`)
+
+Example paginated response:
+
+```json
+{
+    "data": [
+        /* items */
+    ],
+    "nextCursor": null
+}
+```
+
 ## Endpoints
 
 ### GET /health
@@ -134,6 +154,8 @@ Returns sections for the authenticated user.
 
 - `includeArchived=true|false` (default: `false`)
 - `includeCategories=true|false` (default: `false`)
+- `cursor=<id>` (optional) — pagination cursor (see Pagination)
+- `limit=<number>` (optional, default: `50`) — page size (1–100)
 
 **Response 200**
 
@@ -148,7 +170,8 @@ Returns sections for the authenticated user.
             "createdAt": "2026-05-29T10:00:00.000Z",
             "updatedAt": "2026-05-29T10:00:00.000Z"
         }
-    ]
+    ],
+    "nextCursor": null
 }
 ```
 
@@ -203,6 +226,24 @@ Returns one section owned by the authenticated user.
 
 - `NOT_FOUND` (404)
 
+**Response 200**
+
+```json
+{
+    "data": {
+        "id": "cuid",
+        "name": "Food",
+        "color": "#22c55e",
+        "isArchived": false,
+        "categories": [
+            /* optional when includeCategories=true */
+        ],
+        "createdAt": "2026-05-29T10:00:00.000Z",
+        "updatedAt": "2026-05-29T10:00:00.000Z"
+    }
+}
+```
+
 ---
 
 ### PATCH /api/v1/sections/:id
@@ -252,6 +293,9 @@ Returns categories for the authenticated user.
 - `includeArchived=true|false` (default: `false`)
 - `sectionId=<sectionId>` (optional)
 
+- `cursor=<id>` (optional) — pagination cursor (see Pagination)
+- `limit=<number>` (optional, default: `50`) — page size (1–100)
+
 If `sectionId` is provided and does not belong to the authenticated user, returns `VALIDATION_ERROR` (400).
 
 **Response 200**
@@ -268,7 +312,8 @@ If `sectionId` is provided and does not belong to the authenticated user, return
             "createdAt": "2026-05-29T10:00:00.000Z",
             "updatedAt": "2026-05-29T10:00:00.000Z"
         }
-    ]
+    ],
+    "nextCursor": null
 }
 ```
 
@@ -320,6 +365,22 @@ Returns one category owned by the authenticated user.
 **Errors**
 
 - `NOT_FOUND` (404)
+
+**Response 200**
+
+```json
+{
+    "data": {
+        "id": "cuid",
+        "name": "Groceries",
+        "icon": "shopping-cart",
+        "sectionId": "section-cuid",
+        "isArchived": false,
+        "createdAt": "2026-05-29T10:00:00.000Z",
+        "updatedAt": "2026-05-29T10:00:00.000Z"
+    }
+}
+```
 
 ---
 

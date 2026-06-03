@@ -46,6 +46,13 @@ export type CreateTransactionInput = z.infer<typeof createTransactionSchema>
 
 ---
 
+## Validation helpers
+
+- Use `validateBody(c, schema)` to validate JSON request bodies and return typed data.
+- Use `parseOrThrow(schema, input)` to validate URL params and query strings; it throws a `VALIDATION_ERROR` `AppError` on failure.
+
+---
+
 ## Error handling
 
 - Throw `AppError` from services and middleware — never from routes directly.
@@ -75,6 +82,14 @@ return c.json(errorResponse('NOT_FOUND', 'Resource not found'), 404)
 ```
 
 Never construct raw `{ data: … }` or `{ error: … }` objects in route handlers.
+
+### Paginated responses
+
+For list endpoints return `paginatedResponse(items, nextCursor)` from `src/shared/http/api-response.ts`:
+
+```typescript
+return c.json(paginatedResponse(result.items, result.nextCursor))
+```
 
 ---
 
