@@ -101,6 +101,25 @@ prisma.transaction.findMany()
 
 ---
 
+## Decimal serialization
+
+Prisma returns `Decimal` objects for numeric fields declared with `@db.Decimal(…)`.
+These must never be returned raw in API responses. Convert them to JavaScript `number`
+using `Number(value)` in the service layer before building the response:
+
+```typescript
+// In the service's serialize helper:
+const startingBalance = Number(account.startingBalance)
+```
+
+`Number()` works with both real `Prisma.Decimal` objects (production) and plain numbers
+(test mocks), making it safe to use in both environments.
+
+Computed fields that are not stored in the database (e.g. `currentBalance`) are added
+in the same serialize helper and are never persisted.
+
+---
+
 ## Cursor-based pagination
 
 List endpoints use a cursor-based pagination scheme implemented in `src/shared/validation/pagination.ts` and returned with `paginatedResponse`.
