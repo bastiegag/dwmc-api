@@ -18,6 +18,10 @@ All responses use a consistent JSON envelope.
 }
 ```
 
+## Transactions
+
+See [docs/transactions.md](transactions.md) for details about endpoints, request/response examples, and business rules for transactions.
+
 ### Error
 
 ```json

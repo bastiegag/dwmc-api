@@ -163,3 +163,5 @@ src/
   modules/         — Domain modules (one folder per feature)
   tests/           — Integration and unit tests
 ```
+
+Note: The `transactions` module has been implemented (backend). It follows the standard module pattern and provides endpoints to create, list, update, and archive transactions. Transactions feed the account balance calculation (see `docs/transactions.md`).
