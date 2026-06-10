@@ -48,6 +48,11 @@ src/
       category.schema.ts
       category.service.ts
       category.repository.ts
+    budgets/
+      budget.routes.ts
+      budget.schema.ts
+      budget.service.ts
+      budget.repository.ts
     accounts/
       account.routes.ts
       account.schema.ts

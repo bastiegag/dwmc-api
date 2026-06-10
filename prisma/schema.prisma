@@ -23,6 +23,7 @@ model UserProfile {
   categories Category[]
   accounts   Account[]
   transactions Transaction[]
+  budgets     Budget[]
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }
@@ -52,6 +53,7 @@ model Category {
   icon          String
   isArchived    Boolean     @default(false)
   transactions   Transaction[]
+  budgets        Budget[]
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
@@ -139,4 +141,26 @@ model Transaction {
   @@index([categoryId])
   @@index([date])
   @@index([type])
+}
+
+model Budget {
+  id            String      @id @default(cuid())
+  userProfileId String
+  userProfile   UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+
+  categoryId    String
+  category      Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  month         String
+  amount        Decimal     @db.Decimal(12, 2)
+
+  isArchived    Boolean     @default(false)
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([userProfileId])
+  @@index([categoryId])
+  @@index([month])
+  @@unique([userProfileId, categoryId, month])
 }

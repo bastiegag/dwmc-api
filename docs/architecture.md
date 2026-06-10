@@ -165,3 +165,5 @@ src/
 ```
 
 Note: The `transactions` module has been implemented (backend). It follows the standard module pattern and provides endpoints to create, list, update, and archive transactions. Transactions feed the account balance calculation (see `docs/transactions.md`).
+
+Note: The `budgets` module has been implemented (backend). It provides endpoints to create, list, update, get, and archive monthly budgets scoped to the authenticated user. See `docs/budgets.md` for details.
