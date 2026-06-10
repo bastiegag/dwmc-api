@@ -189,6 +189,7 @@ See `docs/api.md` for request/response details.
 ## Next planned modules
 
 - `transactions` — record income and expenses
+    - Note: Transactions backend has been implemented. See `docs/transactions.md` for API details.
 - `budgets` — monthly spending limits
 - `recurring` — recurring transaction rules
 - `reports` — aggregated summaries

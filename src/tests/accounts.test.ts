@@ -26,6 +26,9 @@ vi.mock('../db/prisma.js', () => ({
             create: vi.fn(),
             update: vi.fn(),
         },
+        transaction: {
+            aggregate: vi.fn(),
+        },
     },
 }))
 
@@ -214,6 +217,10 @@ function configurePrismaMocks() {
 
         accounts[index] = next
         return clone(next)
+    })
+    ;(prisma.transaction.aggregate as any).mockImplementation(async (_: any) => {
+        // default zero sums for accounts tests
+        return { _sum: { amount: 0 } }
     })
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */

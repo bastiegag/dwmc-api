@@ -10,6 +10,7 @@ import {
     findManyByUserProfileId,
     updateForUser,
 } from './account.repository.js'
+import { calculateAccountBalance } from './account-balance.service.js'
 import type {
     CreateAccountInput,
     GetAccountsQueryInput,
@@ -36,7 +37,19 @@ export async function listAccounts(authUser: AuthUser, query: GetAccountsQueryIn
         includeArchived: query.includeArchived,
         type: query.type,
     })
-    return accounts.map(serializeAccount)
+    // Compute balances in parallel
+    const withBalances = await Promise.all(
+        accounts.map(async (a) => {
+            const currentBalance = await calculateAccountBalance(
+                profile.id,
+                a.id,
+                Number(a.startingBalance),
+            )
+            return { ...serializeAccount(a), currentBalance }
+        }),
+    )
+
+    return withBalances
 }
 
 export async function createAccount(authUser: AuthUser, input: CreateAccountInput) {
@@ -56,7 +69,12 @@ export async function createAccount(authUser: AuthUser, input: CreateAccountInpu
         icon: input.icon,
     })
 
-    return serializeAccount(account)
+    const currentBalance = await calculateAccountBalance(
+        profile.id,
+        account.id,
+        Number(account.startingBalance),
+    )
+    return { ...serializeAccount(account), currentBalance }
 }
 
 export async function getAccountById(authUser: AuthUser, id: string) {
@@ -67,7 +85,12 @@ export async function getAccountById(authUser: AuthUser, id: string) {
         throw new AppError('NOT_FOUND', 'Account not found', 404)
     }
 
-    return serializeAccount(account)
+    const currentBalance = await calculateAccountBalance(
+        profile.id,
+        account.id,
+        Number(account.startingBalance),
+    )
+    return { ...serializeAccount(account), currentBalance }
 }
 
 export async function updateAccount(authUser: AuthUser, id: string, input: UpdateAccountInput) {
@@ -99,7 +122,12 @@ export async function updateAccount(authUser: AuthUser, id: string, input: Updat
         throw new AppError('NOT_FOUND', 'Account not found', 404)
     }
 
-    return serializeAccount(updated)
+    const currentBalance = await calculateAccountBalance(
+        profile.id,
+        updated.id,
+        Number(updated.startingBalance),
+    )
+    return { ...serializeAccount(updated), currentBalance }
 }
 
 export async function archiveAccount(authUser: AuthUser, id: string) {
@@ -115,5 +143,10 @@ export async function archiveAccount(authUser: AuthUser, id: string) {
         throw new AppError('NOT_FOUND', 'Account not found', 404)
     }
 
-    return serializeAccount(archived)
+    const currentBalance = await calculateAccountBalance(
+        profile.id,
+        archived.id,
+        Number(archived.startingBalance),
+    )
+    return { ...serializeAccount(archived), currentBalance }
 }

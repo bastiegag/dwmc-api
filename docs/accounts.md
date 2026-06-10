@@ -39,6 +39,8 @@ currentBalance = startingBalance
 
 ### Future behaviour (after transactions are implemented)
 
+Note: `currentBalance` is now computed from transactions (excluding archived transactions). See `docs/transactions.md` for details on how different transaction types affect balances and how they are aggregated into `currentBalance`.
+
 ```
 currentBalance = startingBalance + SUM(transactions) + SUM(adjustment transactions)
 ```
