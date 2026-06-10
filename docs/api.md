@@ -22,6 +22,12 @@ All responses use a consistent JSON envelope.
 
 See [docs/transactions.md](transactions.md) for details about endpoints, request/response examples, and business rules for transactions.
 
+## Monthly Summary
+
+Provides calculated financial metrics for a selected calendar month.
+
+See [docs/summary.md](summary.md) for endpoint details and response examples.
+
 ### Error
 
 ```json
