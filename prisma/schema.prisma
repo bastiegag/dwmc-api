@@ -21,6 +21,7 @@ model UserProfile {
   locale     String   @default("fr-CA")
   sections   Section[]
   categories Category[]
+  accounts   Account[]
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }
@@ -55,4 +56,37 @@ model Category {
   @@index([userProfileId])
   @@index([sectionId])
   @@unique([userProfileId, sectionId, name])
+}
+
+model Account {
+  id              String      @id @default(cuid())
+  userProfileId   String
+  userProfile     UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+
+  name            String
+  type            AccountType @default(CHECKING)
+
+  startingBalance Decimal     @default(0) @db.Decimal(12, 2)
+  goal            Decimal?    @db.Decimal(12, 2)
+
+  color           String
+  icon            String
+
+  isArchived      Boolean     @default(false)
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([userProfileId])
+  @@unique([userProfileId, name])
+}
+
+enum AccountType {
+  CHECKING
+  SAVINGS
+  CREDIT_CARD
+  CASH
+  INVESTMENT
+  LOAN
+  OTHER
 }

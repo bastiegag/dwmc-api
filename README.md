@@ -48,6 +48,11 @@ src/
       category.schema.ts
       category.service.ts
       category.repository.ts
+    accounts/
+      account.routes.ts
+      account.schema.ts
+      account.service.ts
+      account.repository.ts
 
   shared/
     errors/
@@ -152,6 +157,11 @@ The backend validates the token with Supabase, extracts the user identity, and a
 | GET    | /api/v1/categories/:id | required | Get category by id             |
 | PATCH  | /api/v1/categories/:id | required | Update category                |
 | DELETE | /api/v1/categories/:id | required | Archive category (soft delete) |
+| GET    | /api/v1/accounts       | required | List accounts                  |
+| POST   | /api/v1/accounts       | required | Create account                 |
+| GET    | /api/v1/accounts/:id   | required | Get account by id              |
+| PATCH  | /api/v1/accounts/:id   | required | Update account                 |
+| DELETE | /api/v1/accounts/:id   | required | Archive account (soft delete)  |
 
 See `docs/api.md` for request/response details.
 
@@ -179,7 +189,6 @@ See `docs/api.md` for request/response details.
 ## Next planned modules
 
 - `transactions` — record income and expenses
-- `accounts` — bank accounts / wallets
 - `budgets` — monthly spending limits
 - `recurring` — recurring transaction rules
 - `reports` — aggregated summaries

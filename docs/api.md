@@ -418,3 +418,141 @@ Soft-deletes a category (`isArchived = true`).
 **Errors**
 
 - `NOT_FOUND` (404)
+
+---
+
+### GET /api/v1/accounts
+
+Returns accounts for the authenticated user. Archived accounts are excluded by default.
+
+**Auth:** required — JWT token in Authorization header
+
+**Query params**
+
+- `includeArchived=true|false` (default: `false`)
+- `type=CHECKING|SAVINGS|CREDIT_CARD|CASH|INVESTMENT|LOAN|OTHER` (optional)
+
+**Response 200**
+
+```json
+{
+    "data": [
+        {
+            "id": "cuid",
+            "name": "Checking Account",
+            "type": "CHECKING",
+            "startingBalance": 1250.75,
+            "currentBalance": 1250.75,
+            "goal": null,
+            "color": "#3b82f6",
+            "icon": "wallet",
+            "isArchived": false,
+            "createdAt": "2026-06-07T10:00:00.000Z",
+            "updatedAt": "2026-06-07T10:00:00.000Z"
+        }
+    ]
+}
+```
+
+---
+
+### POST /api/v1/accounts
+
+Creates an account for the authenticated user.
+
+**Auth:** required — JWT token in Authorization header
+
+**Request body**
+
+```json
+{
+    "name": "Checking Account",
+    "type": "CHECKING",
+    "startingBalance": 1250.75,
+    "goal": null,
+    "color": "#3b82f6",
+    "icon": "wallet"
+}
+```
+
+| Field             | Type                                                            | Required | Notes                                |
+| ----------------- | --------------------------------------------------------------- | -------- | ------------------------------------ |
+| `name`            | string                                                          | yes      | Trimmed, 1–80 chars, unique per user |
+| `type`            | `CHECKING\|SAVINGS\|CREDIT_CARD\|CASH\|INVESTMENT\|LOAN\|OTHER` | no       | Default: `CHECKING`                  |
+| `startingBalance` | number                                                          | no       | Default: `0`. Can be negative        |
+| `goal`            | number \| null                                                  | no       | Optional savings goal                |
+| `color`           | string                                                          | yes      | Trimmed, 1–40 chars                  |
+| `icon`            | string                                                          | yes      | Trimmed, 1–80 chars                  |
+
+**Response 201**
+
+```json
+{
+    "data": {
+        "id": "cuid",
+        "name": "Checking Account",
+        "type": "CHECKING",
+        "startingBalance": 1250.75,
+        "currentBalance": 1250.75,
+        "goal": null,
+        "color": "#3b82f6",
+        "icon": "wallet",
+        "isArchived": false,
+        "createdAt": "2026-06-07T10:00:00.000Z",
+        "updatedAt": "2026-06-07T10:00:00.000Z"
+    }
+}
+```
+
+**Errors**
+
+- `VALIDATION_ERROR` (422)
+- `CONFLICT` (409) — account name already exists for this user
+
+---
+
+### GET /api/v1/accounts/:id
+
+Returns one account owned by the authenticated user.
+
+**Auth:** required — JWT token in Authorization header
+
+**Errors**
+
+- `NOT_FOUND` (404)
+
+---
+
+### PATCH /api/v1/accounts/:id
+
+Updates one account owned by the authenticated user. All fields are optional.
+
+**Auth:** required — JWT token in Authorization header
+
+**Request body**
+
+```json
+{
+    "name": "Main Checking",
+    "startingBalance": 2000.0,
+    "isArchived": false
+}
+```
+
+**Errors**
+
+- `VALIDATION_ERROR` (422)
+- `CONFLICT` (409) — new name already used by another account
+- `NOT_FOUND` (404)
+
+---
+
+### DELETE /api/v1/accounts/:id
+
+Soft-deletes an account (`isArchived = true`).
+
+**Auth:** required — JWT token in Authorization header
+
+**Errors**
+
+- `NOT_FOUND` (404)

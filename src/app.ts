@@ -9,6 +9,7 @@ import { prisma } from './db/prisma.js'
 import { authRoutes } from './modules/auth/auth.routes.js'
 import { sectionRoutes } from './modules/sections/section.routes.js'
 import { categoryRoutes } from './modules/categories/category.routes.js'
+import { accountRoutes } from './modules/accounts/account.routes.js'
 
 const app = new Hono<AppBindings>()
 
@@ -46,5 +47,6 @@ app.get('/ready', async (c) => {
 app.route('/api/v1/auth', authRoutes)
 app.route('/api/v1/sections', sectionRoutes)
 app.route('/api/v1/categories', categoryRoutes)
+app.route('/api/v1/accounts', accountRoutes)
 
 export { app }
