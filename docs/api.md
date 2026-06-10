@@ -75,6 +75,10 @@ Example paginated response:
 
 ## Endpoints
 
+### Budgets
+
+See [docs/budgets.md](budgets.md) for endpoints, request/response examples, and business rules for budgets.
+
 ### GET /health
 
 Liveness check — returns 200 as long as the process is alive.
