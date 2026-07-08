@@ -3,6 +3,7 @@ import { describe, it, beforeEach, expect, vi } from 'vitest'
 import { app } from '../app.js'
 import { prisma } from '../db/prisma.js'
 import { supabase } from '../lib/supabase.js'
+import { TEST_AUTH_USER_1, authHeader, clone, createSupabaseGetUserMock } from './test-utils.js'
 
 vi.mock('../lib/supabase.js', () => ({
     supabase: { auth: { getUser: vi.fn() } },
@@ -18,9 +19,7 @@ vi.mock('../db/prisma.js', () => ({
     },
 }))
 
-const BEARER = 'Bearer '
-const TOKEN_USER_1 = 'token-user-1'
-const TOKEN_USER_2 = 'token-user-2'
+const TOKEN_USER_1 = TEST_AUTH_USER_1.token
 
 const profilesByAuthUserId = new Map<string, any>()
 let categories: any[] = []
@@ -28,22 +27,10 @@ let budgets: any[] = []
 let transactions: any[] = []
 let budgetCounter = 1
 
-const authHeader = (token: string) => {
-    return { Authorization: `${BEARER}${token}` }
-}
-
-const clone = (v: any) => {
-    return JSON.parse(JSON.stringify(v))
-}
-
 const configureSupabaseMock = () => {
-    ;(supabase.auth.getUser as any).mockImplementation(async (token: string) => {
-        if (token === TOKEN_USER_1)
-            return { data: { user: { id: 'auth-user-1', email: 'u1@example.com' } }, error: null }
-        if (token === TOKEN_USER_2)
-            return { data: { user: { id: 'auth-user-2', email: 'u2@example.com' } }, error: null }
-        return { data: { user: null }, error: { message: 'Invalid' } }
-    })
+    ;(supabase.auth.getUser as any).mockImplementation(
+        createSupabaseGetUserMock(undefined, 'Invalid'),
+    )
 }
 
 const configurePrismaMocks = () => {

@@ -2,6 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { app } from '../app.js'
 import { prisma } from '../db/prisma.js'
 import { supabase } from '../lib/supabase.js'
+import {
+    TEST_AUTH_USER_1,
+    TEST_AUTH_USER_2,
+    authHeader,
+    clone,
+    createSupabaseGetUserMock,
+} from './test-utils.js'
 
 type SuccessBody<T> = { data: T }
 type ErrorBody = { error: { code: string; message: string } }
@@ -73,44 +80,18 @@ type SerializedAccount = {
     updatedAt: string
 }
 
-const BEARER = 'Bearer '
-const TOKEN_USER_1 = 'token-user-1'
-const TOKEN_USER_2 = 'token-user-2'
+const TOKEN_USER_1 = TEST_AUTH_USER_1.token
+const TOKEN_USER_2 = TEST_AUTH_USER_2.token
 
 const profilesByAuthUserId = new Map<string, Profile>()
 let accounts: Account[] = []
 let accountCounter = 1
 
-const authHeader = (token: string) => {
-    return { Authorization: `${BEARER}${token}` }
-}
-
-const clone = <T>(value: T): T => {
-    return JSON.parse(JSON.stringify(value)) as T
-}
-
 /* eslint-disable @typescript-eslint/no-explicit-any -- Vitest/Prisma mock interop */
 const configureSupabaseMock = () => {
-    ;(supabase.auth.getUser as any).mockImplementation(async (token: string) => {
-        if (token === TOKEN_USER_1) {
-            return {
-                data: { user: { id: 'auth-user-1', email: 'user1@example.com' } as any },
-                error: null,
-            }
-        }
-
-        if (token === TOKEN_USER_2) {
-            return {
-                data: { user: { id: 'auth-user-2', email: 'user2@example.com' } as any },
-                error: null,
-            }
-        }
-
-        return {
-            data: { user: null },
-            error: { message: 'Invalid JWT' } as any,
-        }
-    })
+    ;(supabase.auth.getUser as any).mockImplementation(
+        createSupabaseGetUserMock(undefined, 'Invalid JWT'),
+    )
 }
 
 const configurePrismaMocks = () => {
