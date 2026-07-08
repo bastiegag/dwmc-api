@@ -4,7 +4,7 @@ import { Hono } from 'hono'
 import { AppError } from '../shared/errors/AppError.js'
 import { handleError } from '../shared/errors/error-handler.js'
 
-function buildApp() {
+const buildApp = () => {
     const app = new Hono()
     app.onError(handleError)
     return app

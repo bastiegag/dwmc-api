@@ -16,7 +16,7 @@ import type {
     UpdateSectionInput,
 } from './section.schema.js'
 
-export async function listSections(authUser: AuthUser, query: GetSectionsQueryInput) {
+export const listSections = async (authUser: AuthUser, query: GetSectionsQueryInput) => {
     const profile = await getOrCreateUserProfile(authUser)
 
     return findManyByUserProfileId(profile.id, {
@@ -28,7 +28,7 @@ export async function listSections(authUser: AuthUser, query: GetSectionsQueryIn
     })
 }
 
-export async function createSection(authUser: AuthUser, input: CreateSectionInput) {
+export const createSection = async (authUser: AuthUser, input: CreateSectionInput) => {
     const profile = await getOrCreateUserProfile(authUser)
 
     const duplicate = await findDuplicateByName(profile.id, input.name)
@@ -39,7 +39,11 @@ export async function createSection(authUser: AuthUser, input: CreateSectionInpu
     return createForUser(profile.id, input)
 }
 
-export async function getSectionById(authUser: AuthUser, id: string, includeCategories: boolean) {
+export const getSectionById = async (
+    authUser: AuthUser,
+    id: string,
+    includeCategories: boolean,
+) => {
     const profile = await getOrCreateUserProfile(authUser)
 
     const section = await findByIdForUser(id, profile.id, { includeCategories })
@@ -50,7 +54,7 @@ export async function getSectionById(authUser: AuthUser, id: string, includeCate
     return section
 }
 
-export async function updateSection(authUser: AuthUser, id: string, input: UpdateSectionInput) {
+export const updateSection = async (authUser: AuthUser, id: string, input: UpdateSectionInput) => {
     const profile = await getOrCreateUserProfile(authUser)
 
     const existing = await findByIdForUser(id, profile.id)
@@ -73,7 +77,7 @@ export async function updateSection(authUser: AuthUser, id: string, input: Updat
     return updated
 }
 
-export async function archiveSection(authUser: AuthUser, id: string) {
+export const archiveSection = async (authUser: AuthUser, id: string) => {
     const profile = await getOrCreateUserProfile(authUser)
 
     const existing = await findByIdForUser(id, profile.id)

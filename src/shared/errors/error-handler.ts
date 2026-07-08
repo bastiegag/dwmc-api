@@ -8,7 +8,7 @@ import { errorResponse } from '../http/api-response.js'
  * - Unknown errors (bugs, third-party throws) produce a generic 500 response
  *   so internal details are never leaked to the client.
  */
-export function handleError(err: Error | unknown, c: Context): Response {
+export const handleError = (err: Error | unknown, c: Context): Response => {
     if (err instanceof AppError) {
         return c.json(errorResponse(err.code, err.message, err.issues), err.statusCode as 400)
     }

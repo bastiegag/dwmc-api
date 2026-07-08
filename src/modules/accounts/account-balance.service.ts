@@ -4,11 +4,11 @@ import { serializeDecimal } from '../../shared/money/decimal.js'
 /**
  * Calculate current account balance by aggregating non-archived transactions.
  */
-export async function calculateAccountBalance(
+export const calculateAccountBalance = async (
     userProfileId: string,
     accountId: string,
     startingBalance: number,
-) {
+) => {
     const income = await prisma.transaction.aggregate({
         _sum: { amount: true },
         where: { userProfileId, type: 'INCOME', accountId, isArchived: false },

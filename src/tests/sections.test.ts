@@ -81,16 +81,16 @@ let categories: Category[] = []
 let sectionCounter = 1
 let categoryCounter = 1
 
-function authHeader(token: string) {
+const authHeader = (token: string) => {
     return { Authorization: `${BEARER}${token}` }
 }
 
-function clone<T>(value: T): T {
+const clone = <T>(value: T): T => {
     return JSON.parse(JSON.stringify(value)) as T
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- Vitest/Prisma mock interop */
-function configureSupabaseMock() {
+const configureSupabaseMock = () => {
     ;(supabase.auth.getUser as any).mockImplementation(async (token: string) => {
         if (token === TOKEN_USER_1) {
             return {
@@ -113,7 +113,7 @@ function configureSupabaseMock() {
     })
 }
 
-function configurePrismaMocks() {
+const configurePrismaMocks = () => {
     ;(prisma.userProfile.upsert as any).mockImplementation(
         async ({ where, update, create }: any) => {
             const existing = profilesByAuthUserId.get(where.authUserId)

@@ -42,15 +42,15 @@ let txCounter = 1
 let accountCounter = 1
 // categoryCounter not used in these tests
 
-function authHeader(token: string) {
+const authHeader = (token: string) => {
     return { Authorization: `${BEARER}${token}` }
 }
 
-function clone<T>(v: T) {
+const clone = <T>(v: T): T => {
     return JSON.parse(JSON.stringify(v)) as T
 }
 
-function configureSupabaseMock() {
+const configureSupabaseMock = () => {
     ;(supabase.auth.getUser as any).mockImplementation(async (token: string) => {
         if (token === TOKEN_USER_1)
             return { data: { user: { id: 'auth-user-1', email: 'u1@example.com' } }, error: null }
@@ -60,7 +60,7 @@ function configureSupabaseMock() {
     })
 }
 
-function configurePrismaMocks() {
+const configurePrismaMocks = () => {
     ;(prisma.userProfile.upsert as any).mockImplementation(
         async ({ where, create, update }: any) => {
             const existing = profilesByAuthUserId.get(where.authUserId)

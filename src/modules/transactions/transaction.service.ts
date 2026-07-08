@@ -19,7 +19,7 @@ import type {
     UpdateTransactionInput,
 } from './transaction.schema.js'
 
-function serializeTransaction(tx: unknown) {
+const serializeTransaction = (tx: unknown) => {
     const t = tx as Record<string, unknown>
     const toIso = (d: unknown) => {
         const hasIso = d && typeof (d as { toISOString?: unknown }).toISOString === 'function'
@@ -48,21 +48,21 @@ function serializeTransaction(tx: unknown) {
     }
 }
 
-async function ensureAccountOwned(accountId: string | undefined, userProfileId: string) {
+const ensureAccountOwned = async (accountId: string | undefined, userProfileId: string) => {
     if (!accountId) return null
     const acct = await findAccountByIdForUser(accountId, userProfileId)
     if (!acct) throw new AppError('NOT_FOUND', 'Account not found', 404)
     return acct
 }
 
-async function ensureCategoryOwned(categoryId: string | undefined, userProfileId: string) {
+const ensureCategoryOwned = async (categoryId: string | undefined, userProfileId: string) => {
     if (!categoryId) return null
     const cat = await findCategoryByIdForUser(categoryId, userProfileId)
     if (!cat) throw new AppError('NOT_FOUND', 'Category not found', 404)
     return cat
 }
 
-export async function listTransactions(authUser: AuthUser, query: GetTransactionsQueryInput) {
+export const listTransactions = async (authUser: AuthUser, query: GetTransactionsQueryInput) => {
     const profile = await getOrCreateUserProfile(authUser)
 
     // Validate ownership of filter IDs
@@ -127,7 +127,7 @@ export async function listTransactions(authUser: AuthUser, query: GetTransaction
     }
 }
 
-export async function createTransaction(authUser: AuthUser, input: CreateTransactionInput) {
+export const createTransaction = async (authUser: AuthUser, input: CreateTransactionInput) => {
     const profile = await getOrCreateUserProfile(authUser)
 
     // Type-specific validations
@@ -192,18 +192,18 @@ export async function createTransaction(authUser: AuthUser, input: CreateTransac
     return serializeTransaction(created)
 }
 
-export async function getTransactionById(authUser: AuthUser, id: string) {
+export const getTransactionById = async (authUser: AuthUser, id: string) => {
     const profile = await getOrCreateUserProfile(authUser)
     const tx = await findByIdForUser(id, profile.id)
     if (!tx) throw new AppError('NOT_FOUND', 'Transaction not found', 404)
     return serializeTransaction(tx)
 }
 
-export async function updateTransaction(
+export const updateTransaction = async (
     authUser: AuthUser,
     id: string,
     input: UpdateTransactionInput,
-) {
+) => {
     const profile = await getOrCreateUserProfile(authUser)
     const existing = await findByIdForUser(id, profile.id)
     if (!existing) throw new AppError('NOT_FOUND', 'Transaction not found', 404)
@@ -269,7 +269,7 @@ export async function updateTransaction(
     return serializeTransaction(updated)
 }
 
-export async function archiveTransaction(authUser: AuthUser, id: string) {
+export const archiveTransaction = async (authUser: AuthUser, id: string) => {
     const profile = await getOrCreateUserProfile(authUser)
     const existing = await findByIdForUser(id, profile.id)
     if (!existing) throw new AppError('NOT_FOUND', 'Transaction not found', 404)

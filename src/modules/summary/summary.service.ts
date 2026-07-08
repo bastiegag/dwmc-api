@@ -41,17 +41,17 @@ type AccountAgg = {
     transactionCount: number
 }
 
-function toIso(d: unknown) {
+const toIso = (d: unknown) => {
     const hasIso = d && typeof (d as { toISOString?: unknown }).toISOString === 'function'
     return hasIso
         ? (d as { toISOString: () => string }).toISOString()
         : new Date(String(d)).toISOString()
 }
 
-export async function getMonthlySummary(
+export const getMonthlySummary = async (
     authUser: AuthUser,
     query: { month?: string; recentLimit?: number },
-) {
+) => {
     const profile = await getOrCreateUserProfile(authUser)
 
     // Determine month range

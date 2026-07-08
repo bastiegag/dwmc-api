@@ -15,7 +15,7 @@ type FindManyOptions = {
     take?: number
 }
 
-function buildWhere(userProfileId: string, options: FindManyOptions) {
+const buildWhere = (userProfileId: string, options: FindManyOptions) => {
     // `where` is dynamically built for Prisma queries.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = { userProfileId }
@@ -40,7 +40,7 @@ function buildWhere(userProfileId: string, options: FindManyOptions) {
     return where
 }
 
-export async function findManyByUserProfileId(userProfileId: string, options: FindManyOptions) {
+export const findManyByUserProfileId = async (userProfileId: string, options: FindManyOptions) => {
     const items = await prisma.transaction.findMany({
         where: buildWhere(userProfileId, options),
         include: {
@@ -57,11 +57,11 @@ export async function findManyByUserProfileId(userProfileId: string, options: Fi
     return items
 }
 
-export async function countManyByUserProfileId(userProfileId: string, options: FindManyOptions) {
+export const countManyByUserProfileId = async (userProfileId: string, options: FindManyOptions) => {
     return prisma.transaction.count({ where: buildWhere(userProfileId, options) })
 }
 
-export async function findByIdForUser(id: string, userProfileId: string) {
+export const findByIdForUser = async (id: string, userProfileId: string) => {
     return prisma.transaction.findFirst({
         where: { id, userProfileId },
         include: {
@@ -73,10 +73,10 @@ export async function findByIdForUser(id: string, userProfileId: string) {
     })
 }
 
-export async function createForUser(
+export const createForUser = async (
     userProfileId: string,
     data: Prisma.TransactionUncheckedCreateInput,
-) {
+) => {
     return prisma.transaction.create({
         data: { ...data, userProfileId },
         include: {
@@ -88,11 +88,11 @@ export async function createForUser(
     })
 }
 
-export async function updateForUser(
+export const updateForUser = async (
     id: string,
     userProfileId: string,
     data: Prisma.TransactionUpdateInput,
-) {
+) => {
     try {
         return await prisma.transaction.update({
             where: { id, userProfileId },
@@ -113,7 +113,7 @@ export async function updateForUser(
     }
 }
 
-export async function archiveForUser(id: string, userProfileId: string) {
+export const archiveForUser = async (id: string, userProfileId: string) => {
     try {
         return await prisma.transaction.update({
             where: { id, userProfileId },

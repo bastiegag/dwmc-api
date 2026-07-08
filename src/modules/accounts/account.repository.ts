@@ -1,10 +1,10 @@
 import { Prisma, type AccountType } from '@prisma/client'
 import { prisma } from '../../db/prisma.js'
 
-export async function findManyByUserProfileId(
+export const findManyByUserProfileId = async (
     userProfileId: string,
     options: { includeArchived: boolean; type?: AccountType },
-) {
+) => {
     return prisma.account.findMany({
         where: {
             userProfileId,
@@ -15,13 +15,13 @@ export async function findManyByUserProfileId(
     })
 }
 
-export async function findByIdForUser(id: string, userProfileId: string) {
+export const findByIdForUser = async (id: string, userProfileId: string) => {
     return prisma.account.findFirst({
         where: { id, userProfileId },
     })
 }
 
-export async function createForUser(
+export const createForUser = async (
     userProfileId: string,
     data: {
         name: string
@@ -31,7 +31,7 @@ export async function createForUser(
         color: string
         icon: string
     },
-) {
+) => {
     return prisma.account.create({
         data: {
             userProfileId,
@@ -45,11 +45,11 @@ export async function createForUser(
     })
 }
 
-export async function updateForUser(
+export const updateForUser = async (
     id: string,
     userProfileId: string,
     data: Prisma.AccountUpdateInput,
-) {
+) => {
     try {
         return await prisma.account.update({
             where: { id, userProfileId },
@@ -63,7 +63,7 @@ export async function updateForUser(
     }
 }
 
-export async function archiveForUser(id: string, userProfileId: string) {
+export const archiveForUser = async (id: string, userProfileId: string) => {
     try {
         return await prisma.account.update({
             where: { id, userProfileId },
@@ -77,7 +77,11 @@ export async function archiveForUser(id: string, userProfileId: string) {
     }
 }
 
-export async function findDuplicateByName(userProfileId: string, name: string, excludeId?: string) {
+export const findDuplicateByName = async (
+    userProfileId: string,
+    name: string,
+    excludeId?: string,
+) => {
     return prisma.account.findFirst({
         where: {
             userProfileId,

@@ -15,7 +15,7 @@ import {
 import { findByIdForUser as findCategoryByIdForUser } from '../categories/category.repository.js'
 import type { CreateBudgetInput, UpdateBudgetInput, GetBudgetsQueryInput } from './budget.schema.js'
 
-function monthToRange(month: string) {
+const monthToRange = (month: string) => {
     const [yStr, mStr] = month.split('-')
     const y = Number(yStr)
     const m = Number(mStr)
@@ -24,7 +24,7 @@ function monthToRange(month: string) {
     return { startIso: start.toISOString(), nextIso: next.toISOString() }
 }
 
-function computeProgress(amountNum: number, spentNum: number) {
+const computeProgress = (amountNum: number, spentNum: number) => {
     if (amountNum === 0) return spentNum === 0 ? 0 : 100
     return (spentNum / amountNum) * 100
 }
@@ -49,7 +49,7 @@ type ExpenseAgg = {
     _count: { id: number }
 }
 
-function serializeBudgetRecord(budget: BudgetWithCategory, spent = 0, count = 0) {
+const serializeBudgetRecord = (budget: BudgetWithCategory, spent = 0, count = 0) => {
     const amount = serializeDecimal(budget.amount as unknown as Prisma.Decimal | number | string)
     const spentNum = Number(spent)
     const remaining = amount - spentNum
@@ -70,14 +70,14 @@ function serializeBudgetRecord(budget: BudgetWithCategory, spent = 0, count = 0)
     }
 }
 
-function toIso(d: unknown) {
+const toIso = (d: unknown) => {
     const hasIso = d && typeof (d as { toISOString?: unknown }).toISOString === 'function'
     return hasIso
         ? (d as { toISOString: () => string }).toISOString()
         : new Date(String(d)).toISOString()
 }
 
-export async function listBudgets(authUser: AuthUser, query: GetBudgetsQueryInput) {
+export const listBudgets = async (authUser: AuthUser, query: GetBudgetsQueryInput) => {
     const profile = await getOrCreateUserProfile(authUser)
 
     if (query.categoryId) {
@@ -116,7 +116,7 @@ export async function listBudgets(authUser: AuthUser, query: GetBudgetsQueryInpu
     })
 }
 
-export async function createBudget(authUser: AuthUser, input: CreateBudgetInput) {
+export const createBudget = async (authUser: AuthUser, input: CreateBudgetInput) => {
     const profile = await getOrCreateUserProfile(authUser)
 
     const cat = await findCategoryByIdForUser(input.categoryId, profile.id)
@@ -145,7 +145,7 @@ export async function createBudget(authUser: AuthUser, input: CreateBudgetInput)
     return serializeBudgetRecord(created, spent, count)
 }
 
-export async function getBudgetById(authUser: AuthUser, id: string) {
+export const getBudgetById = async (authUser: AuthUser, id: string) => {
     const profile = await getOrCreateUserProfile(authUser)
 
     const b = await findByIdForUser(id, profile.id)
@@ -164,7 +164,7 @@ export async function getBudgetById(authUser: AuthUser, id: string) {
     return serializeBudgetRecord(b, spent, count)
 }
 
-export async function updateBudget(authUser: AuthUser, id: string, input: UpdateBudgetInput) {
+export const updateBudget = async (authUser: AuthUser, id: string, input: UpdateBudgetInput) => {
     const profile = await getOrCreateUserProfile(authUser)
 
     const existing = await findByIdForUser(id, profile.id)
@@ -204,7 +204,7 @@ export async function updateBudget(authUser: AuthUser, id: string, input: Update
     return serializeBudgetRecord(updated, spent, count)
 }
 
-export async function archiveBudget(authUser: AuthUser, id: string) {
+export const archiveBudget = async (authUser: AuthUser, id: string) => {
     const profile = await getOrCreateUserProfile(authUser)
 
     const archived = await archiveForUser(id, profile.id)

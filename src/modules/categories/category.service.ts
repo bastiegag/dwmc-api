@@ -16,7 +16,7 @@ import type {
     UpdateCategoryInput,
 } from './category.schema.js'
 
-export async function listCategories(authUser: AuthUser, query: GetCategoriesQueryInput) {
+export const listCategories = async (authUser: AuthUser, query: GetCategoriesQueryInput) => {
     const profile = await getOrCreateUserProfile(authUser)
 
     if (query.sectionId) {
@@ -34,7 +34,7 @@ export async function listCategories(authUser: AuthUser, query: GetCategoriesQue
     })
 }
 
-export async function createCategory(authUser: AuthUser, input: CreateCategoryInput) {
+export const createCategory = async (authUser: AuthUser, input: CreateCategoryInput) => {
     const profile = await getOrCreateUserProfile(authUser)
 
     const section = await findSectionByIdForUser(input.sectionId, profile.id)
@@ -50,7 +50,7 @@ export async function createCategory(authUser: AuthUser, input: CreateCategoryIn
     return createForUser(profile.id, input)
 }
 
-export async function getCategoryById(authUser: AuthUser, id: string) {
+export const getCategoryById = async (authUser: AuthUser, id: string) => {
     const profile = await getOrCreateUserProfile(authUser)
 
     const category = await findByIdForUser(id, profile.id)
@@ -61,7 +61,11 @@ export async function getCategoryById(authUser: AuthUser, id: string) {
     return category
 }
 
-export async function updateCategory(authUser: AuthUser, id: string, input: UpdateCategoryInput) {
+export const updateCategory = async (
+    authUser: AuthUser,
+    id: string,
+    input: UpdateCategoryInput,
+) => {
     const profile = await getOrCreateUserProfile(authUser)
 
     const existing = await findByIdForUser(id, profile.id)
@@ -98,7 +102,7 @@ export async function updateCategory(authUser: AuthUser, id: string, input: Upda
     return updated
 }
 
-export async function archiveCategory(authUser: AuthUser, id: string) {
+export const archiveCategory = async (authUser: AuthUser, id: string) => {
     const profile = await getOrCreateUserProfile(authUser)
 
     const existing = await findByIdForUser(id, profile.id)

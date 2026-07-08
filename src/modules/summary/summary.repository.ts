@@ -1,10 +1,10 @@
 import { prisma } from '../../db/prisma.js'
 
-export async function findTransactionsForMonth(
+export const findTransactionsForMonth = async (
     userProfileId: string,
     startIso: string,
     nextMonthStartIso: string,
-) {
+) => {
     return prisma.transaction.findMany({
         where: {
             userProfileId,
@@ -29,12 +29,12 @@ export async function findTransactionsForMonth(
     })
 }
 
-export async function findRecentTransactionsForMonth(
+export const findRecentTransactionsForMonth = async (
     userProfileId: string,
     startIso: string,
     nextMonthStartIso: string,
     limit: number,
-) {
+) => {
     return prisma.transaction.findMany({
         where: {
             userProfileId,

@@ -9,7 +9,7 @@ import type { AuthUser } from '../../types/app.js'
  * All future business data (transactions, budgets, etc.) will be scoped to the
  * UserProfile via its `id` field.
  */
-export async function getOrCreateUserProfile(authUser: AuthUser) {
+export const getOrCreateUserProfile = async (authUser: AuthUser) => {
     const profile = await prisma.userProfile.upsert({
         where: { authUserId: authUser.id },
         update: { email: authUser.email },

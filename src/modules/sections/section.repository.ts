@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client'
 import { prisma } from '../../db/prisma.js'
 
-export async function findManyByUserProfileId(
+export const findManyByUserProfileId = async (
     userProfileId: string,
     options: {
         includeArchived: boolean
@@ -10,7 +10,7 @@ export async function findManyByUserProfileId(
         cursor?: string
         limit: number
     },
-) {
+) => {
     const items = await prisma.section.findMany({
         where: {
             userProfileId,
@@ -39,11 +39,11 @@ export async function findManyByUserProfileId(
     return { items: data, nextCursor: hasNextPage ? lastId : null }
 }
 
-export async function findByIdForUser(
+export const findByIdForUser = async (
     id: string,
     userProfileId: string,
     options?: { includeCategories: boolean },
-) {
+) => {
     return prisma.section.findFirst({
         where: { id, userProfileId },
         ...(options?.includeCategories
@@ -59,7 +59,10 @@ export async function findByIdForUser(
     })
 }
 
-export async function createForUser(userProfileId: string, data: { name: string; color: string }) {
+export const createForUser = async (
+    userProfileId: string,
+    data: { name: string; color: string },
+) => {
     return prisma.section.create({
         data: {
             userProfileId,
@@ -69,11 +72,11 @@ export async function createForUser(userProfileId: string, data: { name: string;
     })
 }
 
-export async function updateForUser(
+export const updateForUser = async (
     id: string,
     userProfileId: string,
     data: Prisma.SectionUpdateInput,
-) {
+) => {
     try {
         return await prisma.section.update({
             where: { id, userProfileId },
@@ -87,7 +90,7 @@ export async function updateForUser(
     }
 }
 
-export async function archiveForUser(id: string, userProfileId: string) {
+export const archiveForUser = async (id: string, userProfileId: string) => {
     try {
         return await prisma.section.update({
             where: { id, userProfileId },
@@ -101,7 +104,11 @@ export async function archiveForUser(id: string, userProfileId: string) {
     }
 }
 
-export async function findDuplicateByName(userProfileId: string, name: string, excludeId?: string) {
+export const findDuplicateByName = async (
+    userProfileId: string,
+    name: string,
+    excludeId?: string,
+) => {
     return prisma.section.findFirst({
         where: {
             userProfileId,
@@ -111,7 +118,7 @@ export async function findDuplicateByName(userProfileId: string, name: string, e
     })
 }
 
-export async function archiveCategoriesForSection(sectionId: string, userProfileId: string) {
+export const archiveCategoriesForSection = async (sectionId: string, userProfileId: string) => {
     return prisma.category.updateMany({
         where: {
             sectionId,

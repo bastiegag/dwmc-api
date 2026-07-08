@@ -1,10 +1,10 @@
 import { Prisma } from '@prisma/client'
 import { prisma } from '../../db/prisma.js'
 
-export async function findManyByUserProfileId(
+export const findManyByUserProfileId = async (
     userProfileId: string,
     options: { month: string; categoryId?: string; includeArchived?: boolean },
-) {
+) => {
     const items = await prisma.budget.findMany({
         where: {
             userProfileId,
@@ -29,7 +29,7 @@ export async function findManyByUserProfileId(
     return items
 }
 
-export async function findByIdForUser(id: string, userProfileId: string) {
+export const findByIdForUser = async (id: string, userProfileId: string) => {
     return prisma.budget.findFirst({
         where: { id, userProfileId },
         include: {
@@ -46,10 +46,10 @@ export async function findByIdForUser(id: string, userProfileId: string) {
     })
 }
 
-export async function createForUser(
+export const createForUser = async (
     userProfileId: string,
     data: Prisma.BudgetUncheckedCreateInput,
-) {
+) => {
     return prisma.budget.create({
         data: { ...data, userProfileId },
         include: {
@@ -66,11 +66,11 @@ export async function createForUser(
     })
 }
 
-export async function updateForUser(
+export const updateForUser = async (
     id: string,
     userProfileId: string,
     data: Prisma.BudgetUpdateInput,
-) {
+) => {
     try {
         return await prisma.budget.update({
             where: { id, userProfileId },
@@ -95,7 +95,7 @@ export async function updateForUser(
     }
 }
 
-export async function archiveForUser(id: string, userProfileId: string) {
+export const archiveForUser = async (id: string, userProfileId: string) => {
     try {
         return await prisma.budget.update({
             where: { id, userProfileId },
@@ -120,12 +120,12 @@ export async function archiveForUser(id: string, userProfileId: string) {
     }
 }
 
-export async function findDuplicateByCategoryAndMonth(
+export const findDuplicateByCategoryAndMonth = async (
     userProfileId: string,
     categoryId: string,
     month: string,
     excludeId?: string,
-) {
+) => {
     // Some Prisma clients / test mocks may not support passing complex `id` filters
     // (e.g. `{ id: { not: excludeId } }`). To keep behavior deterministic and
     // test-friendly, query by the unique keys then exclude the id in JS if needed.
@@ -136,11 +136,11 @@ export async function findDuplicateByCategoryAndMonth(
     return found
 }
 
-export async function findExpenseTotalsByCategoryForMonth(
+export const findExpenseTotalsByCategoryForMonth = async (
     userProfileId: string,
     startIso: string,
     nextMonthStartIso: string,
-) {
+) => {
     // groupBy by categoryId to get sum and count of expense transactions
     const result = await prisma.transaction.groupBy({
         by: ['categoryId'],

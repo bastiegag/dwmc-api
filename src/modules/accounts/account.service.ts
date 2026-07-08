@@ -21,7 +21,7 @@ import type {
  * Converts Prisma Decimal fields to numbers and adds the computed `currentBalance` field.
  * currentBalance equals startingBalance until transactions are implemented.
  */
-function serializeAccount(account: Account) {
+const serializeAccount = (account: Account) => {
     const startingBalance = Number(account.startingBalance)
     return {
         ...account,
@@ -31,7 +31,7 @@ function serializeAccount(account: Account) {
     }
 }
 
-export async function listAccounts(authUser: AuthUser, query: GetAccountsQueryInput) {
+export const listAccounts = async (authUser: AuthUser, query: GetAccountsQueryInput) => {
     const profile = await getOrCreateUserProfile(authUser)
     const accounts = await findManyByUserProfileId(profile.id, {
         includeArchived: query.includeArchived,
@@ -52,7 +52,7 @@ export async function listAccounts(authUser: AuthUser, query: GetAccountsQueryIn
     return withBalances
 }
 
-export async function createAccount(authUser: AuthUser, input: CreateAccountInput) {
+export const createAccount = async (authUser: AuthUser, input: CreateAccountInput) => {
     const profile = await getOrCreateUserProfile(authUser)
 
     const duplicate = await findDuplicateByName(profile.id, input.name)
@@ -77,7 +77,7 @@ export async function createAccount(authUser: AuthUser, input: CreateAccountInpu
     return { ...serializeAccount(account), currentBalance }
 }
 
-export async function getAccountById(authUser: AuthUser, id: string) {
+export const getAccountById = async (authUser: AuthUser, id: string) => {
     const profile = await getOrCreateUserProfile(authUser)
 
     const account = await findByIdForUser(id, profile.id)
@@ -93,7 +93,7 @@ export async function getAccountById(authUser: AuthUser, id: string) {
     return { ...serializeAccount(account), currentBalance }
 }
 
-export async function updateAccount(authUser: AuthUser, id: string, input: UpdateAccountInput) {
+export const updateAccount = async (authUser: AuthUser, id: string, input: UpdateAccountInput) => {
     const profile = await getOrCreateUserProfile(authUser)
 
     const existing = await findByIdForUser(id, profile.id)
@@ -130,7 +130,7 @@ export async function updateAccount(authUser: AuthUser, id: string, input: Updat
     return { ...serializeAccount(updated), currentBalance }
 }
 
-export async function archiveAccount(authUser: AuthUser, id: string) {
+export const archiveAccount = async (authUser: AuthUser, id: string) => {
     const profile = await getOrCreateUserProfile(authUser)
 
     const existing = await findByIdForUser(id, profile.id)
