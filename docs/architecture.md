@@ -26,7 +26,7 @@ HTTP request
       → Auth middleware (protected routes only)
       → Service layer  (business logic)
           → Repository  (Prisma queries)
-      → successResponse({ data })
+      → successResponse(data) / paginatedResponse(data, nextCursor) / paginatedMetaResponse(data, meta)
   → Error handler (AppError or unknown → errorResponse)
 HTTP response
 ```
@@ -120,9 +120,13 @@ in the same serialize helper and are never persisted.
 
 ---
 
-## Cursor-based pagination
+## Pagination
 
-List endpoints use a cursor-based pagination scheme implemented in `src/shared/validation/pagination.ts` and returned with `paginatedResponse`.
+The API uses two pagination shapes, depending on the module.
+
+### Cursor-based pagination
+
+Sections and categories use cursor-based pagination implemented in `src/shared/validation/pagination.ts` and returned with `paginatedResponse`.
 
 - Query params: `cursor` (optional string id) and `limit` (number, default 50, min 1, max 100).
 - The server returns `{ data: [...], nextCursor: string | null }`. When `nextCursor` is `null` there are no further pages.
@@ -135,17 +139,38 @@ const result = await listSections(authUser, query)
 return c.json(paginatedResponse(result.items, result.nextCursor))
 ```
 
+### Offset-based pagination
+
+Transactions use offset pagination and return `paginatedMetaResponse`.
+
+- Query params: `page` (default `1`) and `pageSize` (default `25`, max `100`).
+- The server returns `{ data: [...], meta: { page, pageSize, total, totalPages } }`.
+- Clients should increment `page` to fetch the next slice.
+
+Example server-side usage in a route handler:
+
+```typescript
+const result = await listTransactions(authUser, query)
+return c.json(paginatedMetaResponse(result.items, result.meta))
+```
+
 ---
 
 ## Sections and categories module pattern
 
 - `src/modules/sections/` and `src/modules/categories/` follow the standard layering:
-    - `*.routes.ts`: parse params/query/body, apply `authMiddleware`, call service, return `successResponse`
+    - `*.routes.ts`: parse params/query/body, apply `authMiddleware`, call service, return `successResponse` for single resources or `paginatedResponse` for list endpoints
     - `*.service.ts`: enforce user ownership rules and business constraints, throw `AppError`
     - `*.repository.ts`: Prisma queries only, always scoped by `userProfileId`
 - Services use the authenticated Supabase user (`c.get('authUser')`), resolve the local `UserProfile`, and pass `UserProfile.id` to repositories.
 - Both modules use soft delete (`isArchived`) instead of hard delete.
 - Archiving a section also archives its child categories to keep data visibility consistent.
+
+## Transactions module pattern
+
+- `src/modules/transactions/` follows the standard layering, but its list endpoint uses offset pagination and returns `paginatedMetaResponse` instead of `paginatedResponse`.
+- Transactions are soft-deleted with `isArchived = true` and excluded from list queries unless `includeArchived=true` is requested.
+- Transaction responses serialize decimals to numbers and dates to ISO strings in the service layer before returning JSON.
 
 ---
 

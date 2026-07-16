@@ -13,38 +13,58 @@ import {
 } from './transaction.repository.js'
 import { findByIdForUser as findAccountByIdForUser } from '../accounts/account.repository.js'
 import { findByIdForUser as findCategoryByIdForUser } from '../categories/category.repository.js'
+import type { TransactionWithRelations } from './transaction.repository.js'
 import type {
     CreateTransactionInput,
     GetTransactionsQueryInput,
     UpdateTransactionInput,
 } from './transaction.schema.js'
 
-const serializeTransaction = (tx: unknown) => {
-    const t = tx as Record<string, unknown>
-    const toIso = (d: unknown) => {
-        const hasIso = d && typeof (d as { toISOString?: unknown }).toISOString === 'function'
-        return hasIso
-            ? (d as { toISOString: () => string }).toISOString()
-            : new Date(String(d)).toISOString()
+type TransactionKind = CreateTransactionInput['type']
+
+type SerializedTransaction = {
+    id: string
+    type: TransactionWithRelations['type']
+    amount: number
+    date: string
+    merchant: string | null
+    note: string | null
+    accountId: string | null
+    fromAccountId: string | null
+    toAccountId: string | null
+    categoryId: string | null
+    isArchived: boolean
+    createdAt: string
+    updatedAt: string
+    account: TransactionWithRelations['account']
+    fromAccount: TransactionWithRelations['fromAccount']
+    toAccount: TransactionWithRelations['toAccount']
+    category: TransactionWithRelations['category']
+}
+
+const serializeTransaction = (tx: TransactionWithRelations): SerializedTransaction => {
+    const toIso = (value: Date | string | number) => {
+        return value instanceof Date ? value.toISOString() : new Date(value).toISOString()
     }
+
     return {
-        id: t.id,
-        type: t.type,
-        amount: serializeDecimal(t['amount'] as unknown),
-        date: toIso(t.date),
-        merchant: (t.merchant ?? null) as string | null,
-        note: (t.note ?? null) as string | null,
-        accountId: (t.accountId ?? null) as string | null,
-        fromAccountId: (t.fromAccountId ?? null) as string | null,
-        toAccountId: (t.toAccountId ?? null) as string | null,
-        categoryId: (t.categoryId ?? null) as string | null,
-        isArchived: t.isArchived as boolean,
-        createdAt: toIso(t.createdAt),
-        updatedAt: toIso(t.updatedAt),
-        account: (t.account ?? null) as Record<string, unknown> | null,
-        fromAccount: (t.fromAccount ?? null) as Record<string, unknown> | null,
-        toAccount: (t.toAccount ?? null) as Record<string, unknown> | null,
-        category: (t.category ?? null) as Record<string, unknown> | null,
+        id: tx.id,
+        type: tx.type,
+        amount: serializeDecimal(tx.amount),
+        date: toIso(tx.date),
+        merchant: tx.merchant,
+        note: tx.note,
+        accountId: tx.accountId,
+        fromAccountId: tx.fromAccountId,
+        toAccountId: tx.toAccountId,
+        categoryId: tx.categoryId,
+        isArchived: tx.isArchived,
+        createdAt: toIso(tx.createdAt),
+        updatedAt: toIso(tx.updatedAt),
+        account: tx.account,
+        fromAccount: tx.fromAccount,
+        toAccount: tx.toAccount,
+        category: tx.category,
     }
 }
 
@@ -60,6 +80,68 @@ const ensureCategoryOwned = async (categoryId: string | undefined, userProfileId
     const cat = await findCategoryByIdForUser(categoryId, userProfileId)
     if (!cat) throw new AppError('NOT_FOUND', 'Category not found', 404)
     return cat
+}
+
+const isMonetaryTransaction = (type: TransactionKind) => {
+    return type === 'INCOME' || type === 'EXPENSE' || type === 'TRANSFER'
+}
+
+const ensurePositiveAmount = (amount: number) => {
+    if (amount <= 0) throw new AppError('VALIDATION_ERROR', 'Amount must be greater than 0', 422)
+}
+
+const applyCreateRelationFields = (
+    data: Prisma.TransactionUncheckedCreateInput,
+    input: CreateTransactionInput,
+) => {
+    if (input.type === 'TRANSFER') {
+        data.fromAccountId = input.fromAccountId
+        data.toAccountId = input.toAccountId
+        data.accountId = null
+        data.categoryId = null
+        return
+    }
+
+    data.accountId = input.accountId ?? null
+    data.categoryId = 'categoryId' in input ? (input.categoryId ?? null) : null
+    data.fromAccountId = null
+    data.toAccountId = null
+}
+
+const applyUpdateRelationFields = (
+    data: Prisma.TransactionUncheckedUpdateInput,
+    input: UpdateTransactionInput,
+    existing: TransactionWithRelations,
+    resultingType: TransactionKind,
+) => {
+    if (resultingType === 'TRANSFER') {
+        const fromId = input.fromAccountId ?? existing.fromAccountId
+        const toId = input.toAccountId ?? existing.toAccountId
+        if (!fromId || !toId)
+            throw new AppError(
+                'VALIDATION_ERROR',
+                'Transfer transactions require both fromAccountId and toAccountId.',
+                422,
+            )
+        if (fromId === toId)
+            throw new AppError('VALIDATION_ERROR', 'Transfer accounts must be different.', 422)
+        data.fromAccountId = fromId
+        data.toAccountId = toId
+        data.accountId = null
+        data.categoryId = null
+        return
+    }
+
+    data.accountId = (input.accountId !== undefined ? input.accountId : existing.accountId) ?? null
+    data.fromAccountId = null
+    data.toAccountId = null
+
+    if (resultingType === 'INCOME' || resultingType === 'EXPENSE') {
+        data.categoryId = input.categoryId !== undefined ? input.categoryId : existing.categoryId
+        return
+    }
+
+    data.categoryId = null
 }
 
 export const listTransactions = async (authUser: AuthUser, query: GetTransactionsQueryInput) => {
@@ -136,8 +218,7 @@ export const createTransaction = async (authUser: AuthUser, input: CreateTransac
             throw new AppError('VALIDATION_ERROR', 'Income transactions require an account.', 422)
         await ensureAccountOwned(input.accountId, profile.id)
         if (input.categoryId) await ensureCategoryOwned(input.categoryId, profile.id)
-        if (input.amount <= 0)
-            throw new AppError('VALIDATION_ERROR', 'Amount must be greater than 0', 422)
+        ensurePositiveAmount(input.amount)
     }
 
     if (input.type === 'TRANSFER') {
@@ -151,8 +232,7 @@ export const createTransaction = async (authUser: AuthUser, input: CreateTransac
             throw new AppError('VALIDATION_ERROR', 'Transfer accounts must be different.', 422)
         await ensureAccountOwned(input.fromAccountId, profile.id)
         await ensureAccountOwned(input.toAccountId, profile.id)
-        if (input.amount <= 0)
-            throw new AppError('VALIDATION_ERROR', 'Amount must be greater than 0', 422)
+        ensurePositiveAmount(input.amount)
     }
 
     if (input.type === 'ADJUSTMENT') {
@@ -171,22 +251,12 @@ export const createTransaction = async (authUser: AuthUser, input: CreateTransac
         type: input.type,
         amount: input.amount,
         date: new Date(input.date),
-        merchant: (input as { merchant?: string | null }).merchant ?? null,
+        merchant: 'merchant' in input ? (input.merchant ?? null) : null,
         note: input.note ?? null,
         userProfileId: profile.id,
     }
 
-    if (input.type === 'TRANSFER') {
-        data.fromAccountId = input.fromAccountId
-        data.toAccountId = input.toAccountId
-        data.accountId = null
-        data.categoryId = null
-    } else {
-        data.accountId = (input as { accountId?: string | null }).accountId ?? null
-        data.categoryId = (input as { categoryId?: string | null }).categoryId ?? null
-        data.fromAccountId = null
-        data.toAccountId = null
-    }
+    applyCreateRelationFields(data, input)
 
     const created = await createForUser(profile.id, data)
     return serializeTransaction(created)
@@ -225,44 +295,13 @@ export const updateTransaction = async (
         ...(input.isArchived !== undefined ? { isArchived: input.isArchived } : {}),
     }
 
-    if (resultingType === 'TRANSFER') {
-        const fromId = input.fromAccountId ?? existing.fromAccountId
-        const toId = input.toAccountId ?? existing.toAccountId
-        if (!fromId || !toId)
-            throw new AppError(
-                'VALIDATION_ERROR',
-                'Transfer transactions require both fromAccountId and toAccountId.',
-                422,
-            )
-        if (fromId === toId)
-            throw new AppError('VALIDATION_ERROR', 'Transfer accounts must be different.', 422)
-        data.fromAccountId = fromId
-        data.toAccountId = toId
-        data.accountId = null
-        data.categoryId = null
-    } else {
-        const acctId =
-            (input.accountId !== undefined ? input.accountId : existing.accountId) ?? null
-        data.accountId = acctId
-        data.fromAccountId = null
-        data.toAccountId = null
-        // category allowed for income/expense
-        if (resultingType === 'INCOME' || resultingType === 'EXPENSE') {
-            data.categoryId =
-                input.categoryId !== undefined ? input.categoryId : existing.categoryId
-        } else {
-            data.categoryId = null
-        }
-    }
+    applyUpdateRelationFields(data, input, existing, resultingType)
 
     if (input.type !== undefined) data.type = input.type
 
     // Validate amounts per type
     const amountToCheck = input.amount !== undefined ? input.amount : Number(existing.amount)
-    if (resultingType === 'INCOME' || resultingType === 'EXPENSE' || resultingType === 'TRANSFER') {
-        if (amountToCheck <= 0)
-            throw new AppError('VALIDATION_ERROR', 'Amount must be greater than 0', 422)
-    }
+    if (isMonetaryTransaction(resultingType)) ensurePositiveAmount(amountToCheck)
 
     const updated = await updateForUser(id, profile.id, data)
     if (!updated) throw new AppError('NOT_FOUND', 'Transaction not found', 404)
@@ -271,8 +310,6 @@ export const updateTransaction = async (
 
 export const archiveTransaction = async (authUser: AuthUser, id: string) => {
     const profile = await getOrCreateUserProfile(authUser)
-    const existing = await findByIdForUser(id, profile.id)
-    if (!existing) throw new AppError('NOT_FOUND', 'Transaction not found', 404)
 
     const archived = await archiveForUser(id, profile.id)
     if (!archived) throw new AppError('NOT_FOUND', 'Transaction not found', 404)

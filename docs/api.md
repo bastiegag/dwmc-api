@@ -18,6 +18,8 @@ All responses use a consistent JSON envelope.
 }
 ```
 
+Single-resource endpoints always return the `data` envelope. List endpoints return either `{ data, nextCursor }` for cursor pagination or `{ data, meta }` for offset pagination, depending on the module.
+
 ## Transactions
 
 See [docs/transactions.md](transactions.md) for details about endpoints, request/response examples, and business rules for transactions.
@@ -55,21 +57,40 @@ See [docs/summary.md](summary.md) for endpoint details and response examples.
 
 ## Pagination
 
-List endpoints use cursor-based pagination. Responses for paginated endpoints return the standard envelope with an additional `nextCursor` field set to a string id when more pages exist or `null` when the page is the last one.
+Sections and categories use cursor-based pagination. Their list responses include `nextCursor`, and clients advance by passing `cursor=<id>`.
 
-Query params used by paginated endpoints:
+Transactions use offset pagination. Their list responses include a `meta` object with `page`, `pageSize`, `total`, and `totalPages`, and clients advance by incrementing `page`.
+
+### Cursor pagination params
 
 - `cursor=<id>` (optional) — id of the last item from the previous page
 - `limit=<number>` (optional, default: `50`, min: `1`, max: `100`)
 
-Example paginated response:
+### Cursor paginated response
 
 ```json
 {
-    "data": [
-        /* items */
-    ],
+    "data": [/* items */],
     "nextCursor": null
+}
+```
+
+### Offset pagination params
+
+- `page=<number>` (optional, default: `1`)
+- `pageSize=<number>` (optional, default: `25`, min: `1`, max: `100`)
+
+### Offset paginated response
+
+```json
+{
+    "data": [/* items */],
+    "meta": {
+        "page": 1,
+        "pageSize": 25,
+        "total": 42,
+        "totalPages": 2
+    }
 }
 ```
 
@@ -249,9 +270,7 @@ Returns one section owned by the authenticated user.
         "name": "Food",
         "color": "#22c55e",
         "isArchived": false,
-        "categories": [
-            /* optional when includeCategories=true */
-        ],
+        "categories": [/* optional when includeCategories=true */],
         "createdAt": "2026-05-29T10:00:00.000Z",
         "updatedAt": "2026-05-29T10:00:00.000Z"
     }

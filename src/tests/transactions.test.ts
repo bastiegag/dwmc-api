@@ -3,9 +3,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { app } from '../app.js'
 import { prisma } from '../db/prisma.js'
 import { supabase } from '../lib/supabase.js'
-import { TEST_AUTH_USER_1, authHeader, clone, createSupabaseGetUserMock } from './test-utils.js'
+import {
+    TEST_AUTH_USER_1,
+    TEST_AUTH_USER_2,
+    authHeader,
+    clone,
+    createSupabaseGetUserMock,
+} from './test-utils.js'
 
 type SuccessBody<T> = { data: T }
+type MetaBody<T> = {
+    data: T
+    meta: { page: number; pageSize: number; total: number; totalPages: number }
+}
 // ErrorBody type removed — tests use inline assertions or cast responses to `any`.
 
 vi.mock('../lib/supabase.js', () => ({
@@ -32,6 +42,7 @@ vi.mock('../db/prisma.js', () => ({
 }))
 
 const TOKEN_USER_1 = TEST_AUTH_USER_1.token
+const TOKEN_USER_2 = TEST_AUTH_USER_2.token
 
 const profilesByAuthUserId = new Map<string, any>()
 let accounts: any[] = []
@@ -44,6 +55,62 @@ let accountCounter = 1
 const configureSupabaseMock = () => {
     ;(supabase.auth.getUser as any).mockImplementation(
         createSupabaseGetUserMock(undefined, 'Invalid'),
+    )
+}
+
+const expectTransactionEnvelope = (body: SuccessBody<any>) => {
+    expect(Object.keys(body).sort()).toEqual(['data'])
+    expect(new Set(Object.keys(body.data))).toEqual(
+        new Set([
+            'account',
+            'accountId',
+            'amount',
+            'createdAt',
+            'category',
+            'categoryId',
+            'date',
+            'fromAccount',
+            'fromAccountId',
+            'id',
+            'isArchived',
+            'merchant',
+            'note',
+            'toAccount',
+            'toAccountId',
+            'type',
+            'updatedAt',
+        ]),
+    )
+    expect(body.data).toMatchObject({
+        id: expect.any(String),
+        type: expect.any(String),
+        amount: expect.any(Number),
+        date: expect.any(String),
+        isArchived: expect.any(Boolean),
+        createdAt: expect.any(String),
+        updatedAt: expect.any(String),
+    })
+    expect(body.data).toHaveProperty('merchant')
+    expect(body.data).toHaveProperty('note')
+    expect(body.data).toHaveProperty('accountId')
+    expect(body.data).toHaveProperty('fromAccountId')
+    expect(body.data).toHaveProperty('toAccountId')
+    expect(body.data).toHaveProperty('categoryId')
+    expect(body.data).toHaveProperty('account')
+    expect(body.data).toHaveProperty('fromAccount')
+    expect(body.data).toHaveProperty('toAccount')
+    expect(body.data).toHaveProperty('category')
+}
+
+const expectTransactionListEnvelope = (body: MetaBody<any[]>) => {
+    expect(Object.keys(body).sort()).toEqual(['data', 'meta'])
+    expect(body.meta).toEqual(
+        expect.objectContaining({
+            page: expect.any(Number),
+            pageSize: expect.any(Number),
+            total: expect.any(Number),
+            totalPages: expect.any(Number),
+        }),
     )
 }
 
@@ -254,6 +321,7 @@ describe('Transactions API', () => {
 
         expect(res.status).toBe(201)
         const body = (await res.json()) as SuccessBody<any>
+        expectTransactionEnvelope(body)
         expect(body.data.amount).toBe(-5)
     })
 
@@ -329,14 +397,17 @@ describe('Transactions API', () => {
             headers: authHeader(TOKEN_USER_1),
         })
         expect(res1.status).toBe(200)
-        const body1 = (await res1.json()) as any
+        const body1 = (await res1.json()) as MetaBody<any[]>
+        expectTransactionListEnvelope(body1)
         expect(body1.data).toHaveLength(1)
+        expect(body1.meta).toMatchObject({ page: 1, pageSize: 25, total: 1, totalPages: 1 })
 
         const res2 = await app.request('/api/v1/transactions?includeArchived=true', {
             headers: authHeader(TOKEN_USER_1),
         })
         expect(res2.status).toBe(200)
-        const body2 = (await res2.json()) as any
+        const body2 = (await res2.json()) as MetaBody<any[]>
+        expectTransactionListEnvelope(body2)
         expect(body2.data).toHaveLength(2)
     })
 
@@ -372,10 +443,64 @@ describe('Transactions API', () => {
             { headers: authHeader(TOKEN_USER_1) },
         )
         expect(res.status).toBe(200)
-        const body = (await res.json()) as any
+        const body = (await res.json()) as MetaBody<any[]>
+        expectTransactionListEnvelope(body)
         expect(body.data.length).toBe(5)
-        expect(body.meta).toBeDefined()
         expect(body.meta.page).toBe(2)
+        expect(body.meta.pageSize).toBe(5)
+        expect(body.meta.total).toBe(15)
+        expect(body.meta.totalPages).toBe(3)
+    })
+
+    it('User-scoped reads do not leak another user transaction', async () => {
+        const acc1 = {
+            id: 'acct-u1',
+            userProfileId: 'profile-auth-user-1',
+            name: 'A1',
+            type: 'CHECKING',
+            startingBalance: 0,
+            goal: null,
+            color: '#000',
+            icon: 'i',
+            isArchived: false,
+        }
+        const acc2 = {
+            id: 'acct-u2',
+            userProfileId: 'profile-auth-user-2',
+            name: 'A2',
+            type: 'CHECKING',
+            startingBalance: 0,
+            goal: null,
+            color: '#000',
+            icon: 'i',
+            isArchived: false,
+        }
+        accounts.push(acc1, acc2)
+
+        const createRes = await app.request('/api/v1/transactions', {
+            method: 'POST',
+            headers: { ...authHeader(TOKEN_USER_2), 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                type: 'INCOME',
+                amount: 12,
+                date: '2026-06-03',
+                accountId: acc2.id,
+            }),
+        })
+        expect(createRes.status).toBe(201)
+        const created = (await createRes.json()) as SuccessBody<any>
+
+        const listRes = await app.request('/api/v1/transactions', {
+            headers: authHeader(TOKEN_USER_1),
+        })
+        expect(listRes.status).toBe(200)
+        const listBody = (await listRes.json()) as MetaBody<any[]>
+        expect(listBody.data.find((tx) => tx.id === created.data.id)).toBeUndefined()
+
+        const getRes = await app.request('/api/v1/transactions/' + created.data.id, {
+            headers: authHeader(TOKEN_USER_1),
+        })
+        expect(getRes.status).toBe(404)
     })
 
     it('Archive (DELETE) sets isArchived true and excluded from balance', async () => {

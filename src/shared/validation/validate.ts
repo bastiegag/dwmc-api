@@ -1,5 +1,6 @@
 import type { Context } from 'hono'
-import type { ZodSchema, ZodType, ZodTypeDef } from 'zod'
+import type { z } from 'zod'
+import { type ZodTypeAny } from 'zod'
 import { AppError, ErrorCodes } from '../errors/AppError.js'
 
 /**
@@ -7,10 +8,7 @@ import { AppError, ErrorCodes } from '../errors/AppError.js'
  * Throws an AppError (VALIDATION_ERROR) if validation fails.
  * Use this for params and query strings; use validateBody for request bodies.
  */
-export const parseOrThrow = <Input, Output>(
-    schema: ZodType<Output, ZodTypeDef, Input>,
-    input: Input,
-): Output => {
+export const parseOrThrow = <T extends ZodTypeAny>(schema: T, input: unknown): z.output<T> => {
     const result = schema.safeParse(input)
     if (!result.success) {
         throw new AppError(
@@ -28,7 +26,10 @@ export const parseOrThrow = <Input, Output>(
  * Parses the request JSON body against a Zod schema and returns the typed value.
  * Throws an AppError (VALIDATION_ERROR) if the body is malformed or fails validation.
  */
-export const validateBody = async <T>(c: Context, schema: ZodSchema<T>): Promise<T> => {
+export const validateBody = async <T extends ZodTypeAny>(
+    c: Context,
+    schema: T,
+): Promise<z.output<T>> => {
     const body = await c.req.json().catch(() => {
         throw new AppError('VALIDATION_ERROR', 'Invalid JSON body', ErrorCodes.VALIDATION_ERROR)
     })
@@ -43,5 +44,5 @@ export const validateBody = async <T>(c: Context, schema: ZodSchema<T>): Promise
         )
     }
 
-    return result.data
+    return result.data as z.output<T>
 }

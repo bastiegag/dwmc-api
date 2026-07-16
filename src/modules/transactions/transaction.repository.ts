@@ -1,9 +1,9 @@
-import type { Prisma } from '@prisma/client'
+import type { Prisma, TransactionType } from '@prisma/client'
 import { prisma } from '../../db/prisma.js'
 
 type FindManyOptions = {
     includeArchived: boolean
-    type?: string
+    type?: TransactionType
     accountId?: string
     categoryId?: string
     fromAccountId?: string
@@ -15,10 +15,24 @@ type FindManyOptions = {
     take?: number
 }
 
+export const transactionInclude = {
+    account: { select: { id: true, name: true, color: true, icon: true } },
+    fromAccount: { select: { id: true, name: true, color: true, icon: true } },
+    toAccount: { select: { id: true, name: true, color: true, icon: true } },
+    category: { select: { id: true, name: true, icon: true, sectionId: true } },
+} satisfies Prisma.TransactionInclude
+
+export type TransactionWithRelations = Prisma.TransactionGetPayload<{
+    include: typeof transactionInclude
+}>
+
+const isPrismaNotFoundError = (error: unknown): error is { code: string } => {
+    if (typeof error !== 'object' || error === null) return false
+    return 'code' in error && typeof (error as { code?: unknown }).code === 'string'
+}
+
 const buildWhere = (userProfileId: string, options: FindManyOptions) => {
-    // `where` is dynamically built for Prisma queries.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const where: any = { userProfileId }
+    const where: Prisma.TransactionWhereInput = { userProfileId }
     if (!options.includeArchived) where.isArchived = false
     if (options.type) where.type = options.type
     if (options.accountId) where.accountId = options.accountId
@@ -26,9 +40,10 @@ const buildWhere = (userProfileId: string, options: FindManyOptions) => {
     if (options.fromAccountId) where.fromAccountId = options.fromAccountId
     if (options.toAccountId) where.toAccountId = options.toAccountId
     if (options.startDate || options.endDate) {
-        where.date = {}
-        if (options.startDate) where.date['gte'] = new Date(options.startDate)
-        if (options.endDate) where.date['lte'] = new Date(options.endDate)
+        const dateFilter: Prisma.DateTimeFilter = {}
+        if (options.startDate) dateFilter.gte = new Date(options.startDate)
+        if (options.endDate) dateFilter.lte = new Date(options.endDate)
+        where.date = dateFilter
     }
     if (options.search) {
         where.OR = [
@@ -43,12 +58,7 @@ const buildWhere = (userProfileId: string, options: FindManyOptions) => {
 export const findManyByUserProfileId = async (userProfileId: string, options: FindManyOptions) => {
     const items = await prisma.transaction.findMany({
         where: buildWhere(userProfileId, options),
-        include: {
-            account: { select: { id: true, name: true, color: true, icon: true } },
-            fromAccount: { select: { id: true, name: true, color: true, icon: true } },
-            toAccount: { select: { id: true, name: true, color: true, icon: true } },
-            category: { select: { id: true, name: true, icon: true, sectionId: true } },
-        },
+        include: transactionInclude,
         orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
         ...(options.skip !== undefined ? { skip: options.skip } : {}),
         ...(options.take !== undefined ? { take: options.take } : {}),
@@ -64,12 +74,7 @@ export const countManyByUserProfileId = async (userProfileId: string, options: F
 export const findByIdForUser = async (id: string, userProfileId: string) => {
     return prisma.transaction.findFirst({
         where: { id, userProfileId },
-        include: {
-            account: { select: { id: true, name: true, color: true, icon: true } },
-            fromAccount: { select: { id: true, name: true, color: true, icon: true } },
-            toAccount: { select: { id: true, name: true, color: true, icon: true } },
-            category: { select: { id: true, name: true, icon: true, sectionId: true } },
-        },
+        include: transactionInclude,
     })
 }
 
@@ -79,12 +84,7 @@ export const createForUser = async (
 ) => {
     return prisma.transaction.create({
         data: { ...data, userProfileId },
-        include: {
-            account: { select: { id: true, name: true, color: true, icon: true } },
-            fromAccount: { select: { id: true, name: true, color: true, icon: true } },
-            toAccount: { select: { id: true, name: true, color: true, icon: true } },
-            category: { select: { id: true, name: true, icon: true, sectionId: true } },
-        },
+        include: transactionInclude,
     })
 }
 
@@ -97,18 +97,12 @@ export const updateForUser = async (
         return await prisma.transaction.update({
             where: { id, userProfileId },
             data,
-            include: {
-                account: { select: { id: true, name: true, color: true, icon: true } },
-                fromAccount: { select: { id: true, name: true, color: true, icon: true } },
-                toAccount: { select: { id: true, name: true, color: true, icon: true } },
-                category: { select: { id: true, name: true, icon: true, sectionId: true } },
-            },
+            include: transactionInclude,
         })
     } catch (e) {
         // Prisma P2025: record not found
         // Mirror pattern used across repositories
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if ((e as any).code === 'P2025') return null
+        if (isPrismaNotFoundError(e) && e.code === 'P2025') return null
         throw e
     }
 }
@@ -118,16 +112,10 @@ export const archiveForUser = async (id: string, userProfileId: string) => {
         return await prisma.transaction.update({
             where: { id, userProfileId },
             data: { isArchived: true },
-            include: {
-                account: { select: { id: true, name: true, color: true, icon: true } },
-                fromAccount: { select: { id: true, name: true, color: true, icon: true } },
-                toAccount: { select: { id: true, name: true, color: true, icon: true } },
-                category: { select: { id: true, name: true, icon: true, sectionId: true } },
-            },
+            include: transactionInclude,
         })
     } catch (e) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if ((e as any).code === 'P2025') return null
+        if (isPrismaNotFoundError(e) && e.code === 'P2025') return null
         throw e
     }
 }

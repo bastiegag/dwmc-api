@@ -16,6 +16,7 @@ GET /api/v1/transactions
 
 - Query params: `type`, `accountId`, `categoryId`, `fromAccountId`, `toAccountId`, `month`, `startDate`, `endDate`, `search`, `includeArchived`, `page`, `pageSize`
 - Returns: `{ data: Transaction[], meta: { page, pageSize, total, totalPages } }`
+- Uses offset pagination; increment `page` to load the next slice.
 
 POST /api/v1/transactions
 

@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import type { AppBindings } from '../../types/app.js'
 import { authMiddleware } from '../auth/auth.middleware.js'
-import { successResponse } from '../../shared/http/api-response.js'
+import { paginatedMetaResponse, successResponse } from '../../shared/http/api-response.js'
 import { parseOrThrow, validateBody } from '../../shared/validation/validate.js'
 import {
     createTransactionSchema,
@@ -23,7 +23,8 @@ transactionRoutes.get('/', authMiddleware, async (c) => {
     const authUser = c.get('authUser')
     const query = parseOrThrow(getTransactionsQuerySchema, c.req.query())
     const result = await listTransactions(authUser, query)
-    return c.json({ data: result.items, meta: result.meta })
+
+    return c.json(paginatedMetaResponse(result.items, result.meta))
 })
 
 transactionRoutes.post('/', authMiddleware, async (c) => {
