@@ -94,6 +94,12 @@ npm run dev
 
 The server starts at `http://localhost:3000` with hot reload via `tsx watch`.
 
+For a full local validation pass, run:
+
+```bash
+npm run validate
+```
+
 ---
 
 ## Prisma command reference

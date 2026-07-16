@@ -6,7 +6,7 @@ Trust these instructions. Only search the codebase if the information here is in
 
 ## Project Summary
 
-`dwmc-api` is a REST API backend for a personal budget application. It is built with **Node.js + TypeScript (strict mode)**, the **Hono** web framework, **Prisma** ORM, **PostgreSQL**, **Zod** for validation, and **Supabase Auth** (JWT) for authentication. Tests run with **Vitest**. There is no CI pipeline file in the repository — validation is done locally.
+`dwmc-api` is a REST API backend for a personal budget application. It is built with **Node.js + TypeScript (strict mode)**, the **Hono** web framework, **Prisma** ORM, **PostgreSQL**, **Zod** for validation, and **Supabase Auth** (JWT) for authentication. Tests run with **Vitest**. The repository has a release workflow in `.github/workflows/release.yml`; validation is done locally and the workflow runs the same validation script before versioning.
 
 ---
 
@@ -34,7 +34,7 @@ tsconfig.json            # Strict TypeScript, NodeNext modules, rootDir=src outD
 vitest.config.ts         # Vitest config — setupFiles: src/tests/setup.ts
 package.json             # All scripts listed below
 prisma/
-  schema.prisma          # Database schema (UserProfile, Section, Category)
+  schema.prisma          # Database schema (UserProfile, Section, Category, Account, Transaction, Budget)
   seed.ts                # Dev seed script
   migrations/            # Prisma migration history
 src/
@@ -48,6 +48,10 @@ src/
     auth/                # auth.routes.ts, auth.middleware.ts, auth.service.ts, auth.schema.ts
     sections/            # section.routes.ts, section.schema.ts, section.service.ts, section.repository.ts
     categories/          # category.routes.ts, category.schema.ts, category.service.ts, category.repository.ts
+    accounts/            # account.routes.ts, account.schema.ts, account.service.ts, account.repository.ts, account-balance.service.ts
+    budgets/             # budget.routes.ts, budget.schema.ts, budget.service.ts, budget.repository.ts
+    summary/             # summary.routes.ts, summary.schema.ts, summary.service.ts, summary.repository.ts
+    transactions/        # transaction.routes.ts, transaction.schema.ts, transaction.service.ts, transaction.repository.ts
   shared/
     errors/AppError.ts         # Typed AppError class + ErrorCode type
     errors/error-handler.ts    # Central Hono onError handler
@@ -62,6 +66,10 @@ src/
     auth.test.ts
     sections.test.ts
     categories.test.ts
+    accounts.test.ts
+    budgets.test.ts
+    monthly-summary.test.ts
+    transactions.test.ts
     error-handler.test.ts
 docs/
   architecture.md        # Request lifecycle, layer responsibilities, how to add a module
@@ -69,7 +77,12 @@ docs/
   api.md                 # Request/response details for all endpoints
   auth.md                # Supabase JWT flow
   local-development.md   # Local setup guide
+  accounts.md            # Accounts module detail
+  budgets.md             # Budgets module detail
   categories.md          # Categories module detail
+  summary.md             # Monthly summary module detail
+  transactions.md        # Transactions module detail
+  RELEASING.md           # Release workflow and versioning
 ```
 
 ---
@@ -78,31 +91,13 @@ docs/
 
 Always run these in order after making changes:
 
-```bash
-# 1. Install dependencies (always do this first after any package.json change)
-npm install
-
-# 2. Type-check (no output emitted)
-npm run typecheck
-
-# 3. Lint — zero warnings allowed
-npm run lint
-
-# 4. Format check
-npm run format:check
-
-# 5. Run tests — no database required, all external deps are mocked
-npm test
+1. Install dependencies first after any `package.json` change: `npm install`
+2. Run the full validation pass: `npm run validate`
 
 Optional / helpful scripts:
-```
 
-npm run test:watch
-npm run test:coverage
-
-```
-
-```
+- `npm run test:watch`
+- `npm run test:coverage`
 
 To compile to `dist/`:
 
@@ -166,7 +161,10 @@ After modifying `prisma/schema.prisma`, always run `npm run db:generate` (or `np
 
 **API responses:** always use `successResponse(data)` and `errorResponse(code, message)` from `src/shared/http/api-response.ts`. Never construct raw `{ data: … }` or `{ error: … }` objects.
 
-For list endpoints use `paginatedResponse(items, nextCursor)` which returns the envelope `{ data, nextCursor }`.
+Use the pagination helper that matches the module:
+
+- `paginatedResponse(items, nextCursor)` for cursor-based lists like sections and categories.
+- `paginatedMetaResponse(items, meta)` for offset-based lists like transactions.
 
 **User data scoping:** every query on user-owned tables **must** include `where: { userProfileId: profile.id }`. Never query without this filter.
 
@@ -193,3 +191,5 @@ The project `tsconfig.json` also enables `noImplicitOverride` and `noImplicitRet
 - Use `parseOrThrow(schema, input)` to validate URL params and query strings (throws `VALIDATION_ERROR` `AppError` on failure).
 
 **Testing:** mock Prisma and Supabase with `vi.mock()` per test file. Use `vi.clearAllMocks()` in `beforeEach`. Test files live in `src/tests/`. Test the HTTP layer (status codes, response shapes). Skip any tests requiring a live Supabase token with `it.skip` and add a comment explaining the requirement.
+
+**Release workflow:** `.github/workflows/release.yml` runs `npm run validate` on pushes to `main`, then Changesets versions the backend and creates or updates the release PR. Keep release notes and docs aligned with the API contract under `/api/v1`.

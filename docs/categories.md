@@ -13,11 +13,13 @@ Each section and category is user-scoped: records are always filtered by the aut
 
 Sections and categories intentionally do **not** store transaction type (`income`, `expense`, `transfer`, `adjustment`).
 
-Type classification is planned for the **Transaction** model. This keeps category management simple and avoids coupling category labels to transaction logic too early.
+Transactions now classify spending and income through their `categoryId` field. This keeps category management simple while still letting the transaction domain reference the category hierarchy.
 
-## Future transaction relationship
+## API behavior
 
-Future `Transaction` records will reference a `Category` (and therefore indirectly its parent `Section`) to classify spending and income.
+- List endpoints are cursor-paginated and return `{ data, nextCursor }`.
+- Archived categories are excluded by default and can be included with `includeArchived=true`.
+- A category can be fetched, updated, or archived only if it belongs to the authenticated user.
 
 ## Soft delete behavior
 

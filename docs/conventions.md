@@ -85,11 +85,15 @@ Never construct raw `{ data: … }` or `{ error: … }` objects in route handler
 
 ### Paginated responses
 
-For list endpoints return `paginatedResponse(items, nextCursor)` from `src/shared/http/api-response.ts`:
+For list endpoints return the helper that matches the module’s pagination strategy from `src/shared/http/api-response.ts`:
 
 ```typescript
 return c.json(paginatedResponse(result.items, result.nextCursor))
+return c.json(paginatedMetaResponse(result.items, result.meta))
 ```
+
+- Use `paginatedResponse(items, nextCursor)` for cursor-based lists like sections and categories.
+- Use `paginatedMetaResponse(items, meta)` for offset-based lists like transactions.
 
 ---
 

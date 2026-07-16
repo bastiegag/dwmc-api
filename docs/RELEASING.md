@@ -2,6 +2,8 @@
 
 This repository uses independent backend versioning. The backend package version in `package.json` is not tied to the frontend repository version.
 
+The release workflow in `.github/workflows/release.yml` runs `npm run validate` on pushes to `main`, then uses Changesets to version the backend and create or update the release PR.
+
 ## Versioning model
 
 There are three different version concepts:

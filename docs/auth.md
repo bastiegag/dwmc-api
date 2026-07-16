@@ -33,8 +33,8 @@ protected request and identify the authenticated user.
 | **Identified by** | `user.id` (UUID)               | `profile.authUserId` (same UUID)           |
 | **Created by**    | Supabase on sign-up            | Backend on first `/auth/me` call           |
 
-The `UserProfile.authUserId` field is the bridge between the two systems. All future
-business tables (transactions, budgets, …) reference `UserProfile.id`.
+The `UserProfile.authUserId` field is the bridge between the two systems. All business
+tables (accounts, sections, categories, transactions, budgets) reference `UserProfile.id`.
 
 ---
 

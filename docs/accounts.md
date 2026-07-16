@@ -26,28 +26,18 @@ account, and the account balance reflects the sum of all its transactions.
 
 ## Balance strategy
 
-Account balances use a **hybrid approach**:
+`currentBalance` is a computed API field returned in every account response. It is never
+stored in the database.
 
-### Current behaviour (no transactions yet)
-
-`currentBalance` is a computed API field returned in every account response. It equals
-`startingBalance` and is never stored in the database:
-
-```
-currentBalance = startingBalance
-```
-
-### Future behaviour (after transactions are implemented)
-
-Note: `currentBalance` is now computed from transactions (excluding archived transactions). See `docs/transactions.md` for details on how different transaction types affect balances and how they are aggregated into `currentBalance`.
+The backend calculates it from the account’s starting balance plus all in-app transaction
+activity owned by the same user, excluding archived transactions.
 
 ```
-currentBalance = startingBalance + SUM(transactions) + SUM(adjustment transactions)
+currentBalance = startingBalance + income - expenses + adjustments + incomingTransfers - outgoingTransfers
 ```
 
-Transactions of type `ADJUSTMENT` will allow a user to reconcile the real account balance
-with what the app has calculated. This is useful when the user has transactions outside the
-app that need to be accounted for.
+Transactions of type `ADJUSTMENT` can be positive, negative, or zero and are used to
+reconcile the real account balance with the app’s calculated balance.
 
 **Why not store `currentBalance` in the database?**
 
@@ -86,7 +76,7 @@ to include them.
 | `name`            | `string`            | Trimmed, 1–80 chars, unique per user               |
 | `type`            | `AccountType`       | Default: `CHECKING`                                |
 | `startingBalance` | `number`            | Can be negative (credit cards, loans). Default `0` |
-| `currentBalance`  | `number` (computed) | Not stored; equals `startingBalance` for now       |
+| `currentBalance`  | `number` (computed) | Not stored; computed from transactions             |
 | `goal`            | `number \| null`    | Optional savings target                            |
 | `color`           | `string`            | Trimmed, 1–40 chars                                |
 | `icon`            | `string`            | Trimmed, 1–80 chars                                |
