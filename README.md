@@ -170,6 +170,12 @@ The backend validates the token with Supabase, extracts the user identity, and a
 
 See `docs/api.md` for request/response details.
 
+## Releases
+
+Backend releases use Semantic Versioning, Changesets, Conventional Commits, Git tags, and GitHub Releases. The backend package version is independent from the frontend repository version, and the public HTTP contract stays on `/api/v1` unless a deliberate breaking API migration is introduced.
+
+See [docs/RELEASING.md](docs/RELEASING.md) for the full workflow.
+
 ## Scripts
 
 | Script                  | Description                      |
