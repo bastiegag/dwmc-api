@@ -1,137 +1,40 @@
-# Conventions
+# Backend Conventions
 
-## Naming
+## Naming and Structure
 
-| Thing                 | Convention                    | Example                     |
-| --------------------- | ----------------------------- | --------------------------- |
-| Files                 | `kebab-case`                  | `auth.middleware.ts`        |
-| Classes               | `PascalCase`                  | `AppError`                  |
-| Functions / variables | `camelCase`                   | `getOrCreateUserProfile`    |
-| Types / interfaces    | `PascalCase`                  | `AuthUser`, `AppBindings`   |
-| Zod schemas           | `camelCase` + `Schema` suffix | `authUserSchema`            |
-| Route files           | `<module>.routes.ts`          | `auth.routes.ts`            |
-| Service files         | `<module>.service.ts`         | `auth.service.ts`           |
-| Repository files      | `<module>.repository.ts`      | `transaction.repository.ts` |
+- Files use kebab-case, such as `transaction.service.ts`.
+- Classes, types, and interfaces use PascalCase.
+- Functions and variables use camelCase.
+- Zod schemas use camelCase with a `Schema` suffix.
+- Domain modules live under `src/modules/<name>/`.
+- Use `import type` for type-only imports.
+- Keep environment access in `src/config/env.ts`; do not read `process.env` in application modules.
 
----
+## Validation
 
-## Module structure
+Define request schemas in `*.schema.ts`. Use `validateBody(c, schema)` for JSON bodies and `parseOrThrow(schema, input)` for params and query strings. Validation failures become `AppError` responses with the standard error envelope. Some domain checks intentionally use a specific status, such as an invalid related section returning `400`; do not normalize statuses without checking the service and tests.
 
-Every domain module lives in `src/modules/<name>/` and follows this layout:
+## Errors and Responses
 
-```
-modules/transactions/
-  transaction.routes.ts      # Hono router — thin, delegates to service
-  transaction.schema.ts      # Zod schemas for request/response shapes
-  transaction.service.ts     # Business logic
-  transaction.repository.ts  # Prisma queries (no HTTP / no business logic)
-```
+Services and middleware throw `AppError` with one of `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_ERROR`, `CONFLICT`, or `INTERNAL_SERVER_ERROR`. The central handler prevents raw Prisma or Supabase errors from becoming the public contract.
 
-Routes stay thin — they validate input, call the service, and return a response.
-Business rules belong in the service. Database queries belong in the repository.
+Use response helpers from `src/shared/http/api-response.ts`:
 
----
+- `successResponse(data)` for ordinary success responses.
+- `paginatedResponse(items, nextCursor)` for sections and categories.
+- `paginatedMetaResponse(items, meta)` for transactions.
+- `errorResponse(...)` when an explicit route-level error response is required.
 
-## Zod schemas
+## Persistence and Ownership
 
-- Define schemas in `*.schema.ts` files, not inline in routes or services.
-- Name schemas with a `Schema` suffix: `createTransactionSchema`, `userProfileResponseSchema`.
-- Use `.strict()` on object schemas when the exact shape matters.
-- Export inferred types alongside schemas:
+Every query on a user-owned table must include the authenticated user's `userProfileId`. Use services to resolve ownership and repositories to apply the Prisma filter. Archive domain records with `isArchived: true`; `DELETE` endpoints are archive operations, not hard deletes. Archiving a section also archives its categories.
 
-```typescript
-export const createTransactionSchema = z.object({ … })
-export type CreateTransactionInput = z.infer<typeof createTransactionSchema>
-```
+Prisma `Decimal` fields are serialized to JSON numbers in services. Dates returned by services are ISO strings. Do not expose raw Prisma Decimal instances.
 
----
+## Dates and Money
 
-## Validation helpers
+Use `YYYY-MM` for month values. Monthly ranges are UTC-based with an inclusive start and exclusive next-month boundary. Do not introduce ambiguous local-time month calculations. Transaction amounts are positive for income, expense, and transfer movements; adjustments may be negative, zero, or positive. See [transactions](transactions.md), [accounts](accounts.md), and [database](database.md).
 
-- Use `validateBody(c, schema)` to validate JSON request bodies and return typed data.
-- Use `parseOrThrow(schema, input)` to validate URL params and query strings; it throws a `VALIDATION_ERROR` `AppError` on failure.
+## Tests
 
----
-
-## Error handling
-
-- Throw `AppError` from services and middleware — never from routes directly.
-- Use the appropriate error code: `NOT_FOUND`, `VALIDATION_ERROR`, `UNAUTHORIZED`, etc.
-- The central `handleError` in `src/shared/errors/error-handler.ts` catches everything
-  and converts it to the standard error envelope.
-- Never let Prisma or Supabase errors propagate to the client raw — catch them in the
-  service and rethrow as `AppError`.
-
-```typescript
-// ✅ Correct
-throw new AppError('NOT_FOUND', 'Transaction not found', 404)
-
-// ❌ Wrong — raw Prisma error leaks internal details
-throw prismaError
-```
-
----
-
-## API responses
-
-Always use the helpers from `src/shared/http/api-response.ts`:
-
-```typescript
-return c.json(successResponse({ user, profile }))
-return c.json(errorResponse('NOT_FOUND', 'Resource not found'), 404)
-```
-
-Never construct raw `{ data: … }` or `{ error: … }` objects in route handlers.
-
-### Paginated responses
-
-For list endpoints return the helper that matches the module’s pagination strategy from `src/shared/http/api-response.ts`:
-
-```typescript
-return c.json(paginatedResponse(result.items, result.nextCursor))
-return c.json(paginatedMetaResponse(result.items, result.meta))
-```
-
-- Use `paginatedResponse(items, nextCursor)` for cursor-based lists like sections and categories.
-- Use `paginatedMetaResponse(items, meta)` for offset-based lists like transactions.
-
----
-
-## User data scoping
-
-**Every** database query for user-owned data must be filtered by `userProfileId`.
-This is non-negotiable — it prevents users from reading or modifying each other's data.
-
-```typescript
-// ✅ Always scope to the authenticated user
-prisma.transaction.findMany({
-    where: { userProfileId: profile.id },
-})
-
-// ❌ Never query without a user filter on user-owned tables
-prisma.transaction.findMany()
-```
-
----
-
-## Testing
-
-- Test files live in `src/tests/`.
-- Mock external dependencies (Prisma, Supabase) with `vi.mock()` — tests must not
-  require a running database or real Supabase credentials.
-- Test file naming mirrors the feature: `auth.test.ts`, `health.test.ts`.
-- Use `vi.clearAllMocks()` in `beforeEach` to prevent test pollution.
-- Test the HTTP layer (status codes, response shapes) rather than internal
-  implementation details.
-- For real integration tests that require a live Supabase token, document the
-  procedure in a comment inside the test file and skip them in CI with `it.skip`.
-
----
-
-## TypeScript
-
-- Strict mode is enabled — no implicit `any`, no unchecked index access.
-- Use `type` imports where possible (`import type { … }`).
-- Avoid `as any` outside of test files.
-- All environment access goes through `src/config/env.ts` — never read
-  `process.env` directly in application code.
+Tests live in `src/tests/`, mock Prisma and Supabase with Vitest, clear mocks between cases, and assert HTTP status and response envelopes. Prioritize ownership, validation, archive behavior, month boundaries, calculations, and regressions.

@@ -1,45 +1,26 @@
-# Transactions API
+# Transactions
 
-Transactions represent financial movements scoped to a `UserProfile`.
+Transactions are user-owned financial movements with type `INCOME`, `EXPENSE`, `TRANSFER`, or `ADJUSTMENT`.
 
-Types: `INCOME`, `EXPENSE`, `TRANSFER`, `ADJUSTMENT`.
+## Endpoints
 
-Behavior:
+- `GET /api/v1/transactions`: offset-paginated list.
+- `POST /api/v1/transactions`: create.
+- `GET /api/v1/transactions/:id`: get one owned transaction.
+- `PATCH /api/v1/transactions/:id`: update and normalize type-specific relations.
+- `DELETE /api/v1/transactions/:id`: archive.
 
-- All routes require authentication (Supabase JWT via `Authorization: Bearer ...`).
-- Transactions are soft-deleted via `isArchived` and excluded by default.
-- Transactions belong to a single `UserProfile` and may reference `Account` and `Category` records owned by the same user.
+All endpoints require authentication. List filters include type, account relation IDs, category ID, month, start/end dates, search, archive inclusion, page, and page size. Month filtering uses `YYYY-MM` and the UTC month range.
 
-Endpoints:
+## Type Rules
 
-GET /api/v1/transactions
+- Income and expense use one `accountId` and may use a category.
+- Transfers use `fromAccountId` and `toAccountId`, require different accounts, and do not use `accountId` or `categoryId`.
+- Adjustments use one `accountId` and do not use a category.
+- Income, expense, and transfer amounts must be greater than zero.
+- Adjustment amounts may be negative, zero, or positive.
+- Referenced accounts and categories must belong to the authenticated user.
 
-- Query params: `type`, `accountId`, `categoryId`, `fromAccountId`, `toAccountId`, `month`, `startDate`, `endDate`, `search`, `includeArchived`, `page`, `pageSize`
-- Returns: `{ data: Transaction[], meta: { page, pageSize, total, totalPages } }`
-- Uses offset pagination; increment `page` to load the next slice.
+Transactions are archived with `isArchived: true` and excluded from default lists and calculations. Amounts are serialized from Prisma Decimal to numbers and dates to ISO strings.
 
-POST /api/v1/transactions
-
-- Create transaction. Request body is validated per `type`.
-- 201 on success with `{ data: Transaction }`.
-
-GET /api/v1/transactions/:id
-
-- Returns a single transaction if it belongs to the authenticated user.
-
-PATCH /api/v1/transactions/:id
-
-- Update transaction. Ownership validated. Fields normalized according to `type`.
-
-DELETE /api/v1/transactions/:id
-
-- Soft-delete (sets `isArchived = true`).
-
-Amount rules:
-
-- `INCOME`, `EXPENSE`, `TRANSFER` amounts must be > 0.
-- `ADJUSTMENT` amount can be negative, zero, or positive.
-
-Account balance:
-
-- `currentBalance = startingBalance + income - expenses + adjustments + incomingTransfers - outgoingTransfers` (archived transactions excluded)
+The frontend client patterns are documented in `dwmc-web/docs/frontend-api.md` in the sibling repository.

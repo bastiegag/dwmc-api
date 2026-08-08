@@ -1,44 +1,19 @@
 # Sections and Categories
 
-## Two-level classification model
+The product uses a two-level hierarchy:
 
-The budgeting domain uses a strict two-level hierarchy:
+- A **Section** has a name and color.
+- A **Category** belongs to one Section and has a name and icon.
 
-- **Section**: a top-level grouping (for example `Food`, `Home`, `Income`)
-- **Category**: a child item inside a section (for example `Groceries`, `Rent`, `Salary`)
+Neither model defines transaction direction. Transaction type is owned by the transaction record.
 
-Each section and category is user-scoped: records are always filtered by the authenticated user's `UserProfile.id`.
+## Endpoints
 
-## Why there is no `type` field
+Both resources support authenticated list, create, get, patch, and delete/archive operations:
 
-Sections and categories intentionally do **not** store transaction type (`income`, `expense`, `transfer`, `adjustment`).
+- `/api/v1/sections`
+- `/api/v1/categories`
 
-Transactions now classify spending and income through their `categoryId` field. This keeps category management simple while still letting the transaction domain reference the category hierarchy.
+Section and category lists use cursor pagination with `cursor`, `limit`, and `nextCursor`. Categories can be filtered by `sectionId`. Sections can include categories with `includeCategories`; archived records are excluded by default and can be included where supported.
 
-## API behavior
-
-- List endpoints are cursor-paginated and return `{ data, nextCursor }`.
-- Archived categories are excluded by default and can be included with `includeArchived=true`.
-- A category can be fetched, updated, or archived only if it belongs to the authenticated user.
-
-## Soft delete behavior
-
-- Sections and categories are soft-deleted with `isArchived = true`.
-- Archived records are excluded from list endpoints by default.
-- Archiving a section also archives all categories under that section.
-
-## Example data
-
-```json
-{
-    "section": {
-        "id": "sec_food",
-        "name": "Food",
-        "color": "#22c55e",
-        "categories": [
-            { "id": "cat_groceries", "name": "Groceries", "icon": "shopping-cart" },
-            { "id": "cat_restaurants", "name": "Restaurants", "icon": "utensils" }
-        ]
-    }
-}
-```
+Names are unique within the relevant user scope. A category's section must belong to the same user. Archiving a section archives its child categories. See [API design](api.md) for the shared response contract.

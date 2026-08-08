@@ -1,107 +1,50 @@
 # Authentication
 
-## Overview
+## Responsibility Split
 
-Authentication is fully delegated to **Supabase Auth**. The backend never stores
-passwords, never issues tokens, and never manages sessions.
+Supabase Auth owns passwords, sign-in, sign-up, recovery, reset, sessions, and token issuance. The backend validates the access token on protected requests and never becomes the browser's session store.
 
-The backend's only responsibility is to **validate the Supabase access token** on every
-protected request and identify the authenticated user.
+The frontend sends:
 
----
-
-## Frontend → Backend token flow
-
-```
-1. User signs in via Supabase Auth on the frontend
-2. Supabase issues an access token (JWT)
-3. Frontend sends the token with every API request:
-      Authorization: ******
-4. Backend validates the token with Supabase
-5. Backend extracts the user identity and attaches it to the request context
-6. Route handler reads c.get('authUser')
+```http
+Authorization: Bearer <Supabase access token>
 ```
 
----
+The frontend integration is documented in `dwmc-web/docs/frontend-api.md` in the sibling repository.
 
-## Supabase Auth vs local UserProfile
+## Middleware
 
-|                   | Supabase Auth user             | Local UserProfile                          |
-| ----------------- | ------------------------------ | ------------------------------------------ |
-| **Stored where**  | Supabase Auth database         | Local PostgreSQL                           |
-| **Manages**       | Identity, login, sessions, MFA | App-specific data (currency, locale, name) |
-| **Identified by** | `user.id` (UUID)               | `profile.authUserId` (same UUID)           |
-| **Created by**    | Supabase on sign-up            | Backend on first `/auth/me` call           |
-
-The `UserProfile.authUserId` field is the bridge between the two systems. All business
-tables (accounts, sections, categories, transactions, budgets) reference `UserProfile.id`.
-
----
-
-## Backend Supabase client
-
-`src/lib/supabase.ts` creates a single Supabase client using `SUPABASE_SERVICE_ROLE_KEY`.
-
-This key:
-
-- Allows the backend to call `supabase.auth.getUser(token)` to validate JWTs server-side.
-- Bypasses Row Level Security — use it **only on the backend**, never expose it to the browser.
-
----
-
-## Auth middleware
-
-`src/modules/auth/auth.middleware.ts`
-
-```typescript
-// Applied to any route that requires authentication:
-authRoutes.get('/me', authMiddleware, handler)
-```
-
-The middleware:
+`src/modules/auth/auth.middleware.ts`:
 
 1. Reads the `Authorization` header.
-2. Verifies it starts with `Bearer `
-3. Calls `supabase.auth.getUser(token)`.
-4. Returns `401 UNAUTHORIZED` if the token is missing, malformed, invalid, or expired.
-5. Sets `c.set('authUser', { id, email })` for the route handler.
+2. Requires the `Bearer ` prefix.
+3. Passes the token to `supabase.auth.getUser(token)`.
+4. Returns `401 UNAUTHORIZED` when the header or token is missing, malformed, invalid, or expired.
+5. Stores `{ id, email }` as `authUser` in the Hono context.
 
----
+All protected resource routes apply this middleware.
 
-## How /api/v1/auth/me works
+## Profile Synchronization
 
-1. `authMiddleware` validates the token and sets `authUser` in the context.
-2. `getOrCreateUserProfile(authUser)` upserts the local `UserProfile` record.
-3. Returns both the Supabase user identity and the local profile.
+`GET /api/v1/auth/me` validates the token, upserts the local `UserProfile`, and returns both the authenticated Supabase identity and profile. The profile's `authUserId` is unique and is the bridge to all user-owned domain records.
 
-This endpoint is a safe way for the frontend to bootstrap the session after sign-in.
+A successful response has the form:
 
----
-
-## How to protect a future route
-
-```typescript
-import { Hono } from 'hono'
-import type { AppBindings } from '../../types/app.js'
-import { authMiddleware } from '../auth/auth.middleware.js'
-
-const transactionRoutes = new Hono<AppBindings>()
-
-transactionRoutes.get('/', authMiddleware, async (c) => {
-    const authUser = c.get('authUser') // typed: { id: string, email?: string }
-    // fetch data scoped to authUser.id …
-})
+```json
+{
+    "data": {
+        "user": { "id": "...", "email": "..." },
+        "profile": { "id": "...", "authUserId": "..." }
+    }
+}
 ```
 
----
+## Authorization
 
-## Supabase Auth features (frontend only)
+Authentication proves identity; it does not grant access to another user's records. Services resolve `UserProfile` and repositories filter by its ID. A resource belonging to another user is treated as not found by the resource lookup patterns. Frontend route visibility is not authorization.
 
-The frontend uses the Supabase JS client to handle:
+## Secrets
 
-- Sign up
-- Sign in (email/password, OAuth, magic link, …)
-- Forgot password / reset password
-- Session refresh
+The backend service-role key is required only by the backend Supabase client. It must never be exposed through frontend variables, API responses, logs, or committed files.
 
-The backend does not implement any of these — Supabase handles them entirely.
+Logout is handled by the frontend Supabase client. The backend does not manage browser sessions.
