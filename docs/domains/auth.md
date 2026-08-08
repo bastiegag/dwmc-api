@@ -10,7 +10,7 @@ The frontend sends:
 Authorization: Bearer <Supabase access token>
 ```
 
-The frontend integration is documented in `dwmc-web/docs/frontend-api.md` in the sibling repository.
+The frontend integration is documented in `dwmc-web/docs/api.md` in the sibling repository.
 
 ## Middleware
 

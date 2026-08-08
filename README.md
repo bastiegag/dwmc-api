@@ -19,7 +19,7 @@ Hono route
 -> response helper
 ```
 
-See [architecture](docs/architecture.md), [conventions](docs/conventions.md), and [database](docs/database.md).
+See [architecture](docs/architecture.md) and [database](docs/database.md).
 
 ## Getting Started
 
@@ -40,29 +40,29 @@ npm run dev
 
 The development server listens on port `3000` by default. The frontend repository's Vite development server proxies `/api/v1` to this server.
 
-See [local development](docs/local-development.md) for the complete setup and Prisma commands.
+See the package scripts and [releasing](docs/releasing.md) for migration and validation guidance.
 
 ## Environment Variables
 
 The validated backend variables are:
 
-| Variable                    | Purpose                                                         |
-| --------------------------- | --------------------------------------------------------------- |
-| `NODE_ENV`                  | `development`, `test`, or `production`.                         |
-| `PORT`                      | HTTP port, default `3000`.                                      |
-| `APP_ORIGIN`                | Allowed CORS origin.                                            |
-| `DATABASE_URL`              | PostgreSQL connection string.                                   |
-| `SUPABASE_URL`              | Supabase project URL.                                           |
-| `SUPABASE_ANON_KEY`         | Supabase anonymous key used by the backend client.              |
-| `SUPABASE_SERVICE_ROLE_KEY` | Backend-only key used for server-side Supabase Auth validation. |
+| Variable                    | Purpose                                                                |
+| --------------------------- | ---------------------------------------------------------------------- |
+| `NODE_ENV`                  | `development`, `test`, or `production`.                                |
+| `PORT`                      | HTTP port, default `3000`.                                             |
+| `APP_ORIGIN`                | Allowed CORS origin.                                                   |
+| `DATABASE_URL`              | PostgreSQL connection string.                                          |
+| `SUPABASE_URL`              | Supabase project URL.                                                  |
+| `SUPABASE_ANON_KEY`         | Supabase anonymous key retained for backend environment compatibility. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Backend-only key used for server-side Supabase Auth validation.        |
 
 Never expose `SUPABASE_SERVICE_ROLE_KEY` to the browser or commit real credentials.
 
 ## API
 
-The public API namespace is `/api/v1`. Public endpoints are `GET /health` and `GET /ready`. Authenticated resources are auth profile bootstrap, sections, categories, accounts, transactions, monthly summary, and budgets.
+The public API namespace is `/api/v1`. Public endpoints are `GET /health` and `GET /ready`. Authenticated resources are auth profile bootstrap, sections, categories, accounts, transactions, monthly summary, and budgets. Authentication behavior is documented in [domains/auth.md](docs/domains/auth.md).
 
-See [API design](docs/api.md) for the endpoint inventory and response contract. The frontend consumption pattern is documented in `dwmc-web/docs/frontend-api.md` in the sibling repository.
+See [API design](docs/api.md) for the endpoint inventory and response contract. The frontend consumption pattern is documented in `dwmc-web/docs/api.md` in the sibling repository.
 
 ## Database
 
@@ -100,16 +100,13 @@ npm run build
 ## Documentation
 
 - [Architecture](docs/architecture.md)
-- [Conventions](docs/conventions.md)
 - [API design](docs/api.md)
-- [Authentication](docs/auth.md)
+- [Authentication](docs/domains/auth.md)
 - [Database](docs/database.md)
 - [Testing](docs/testing.md)
-- [Observability](docs/observability.md)
-- [Local development](docs/local-development.md)
-- [Accounts](docs/accounts.md)
-- [Budgets](docs/budgets.md)
-- [Categories and sections](docs/categories.md)
-- [Monthly summary](docs/summary.md)
-- [Transactions](docs/transactions.md)
-- [Releasing](docs/RELEASING.md)
+- [Accounts](docs/domains/accounts.md)
+- [Budgets](docs/domains/budgets.md)
+- [Categories and sections](docs/domains/categories.md)
+- [Monthly summary](docs/domains/summary.md)
+- [Transactions](docs/domains/transactions.md)
+- [Releasing](docs/releasing.md)

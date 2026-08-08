@@ -65,4 +65,4 @@ Budgets accept `month`, `categoryId`, and `includeArchived`. Summary accepts `mo
 
 Dates serialize as ISO strings. Month values use `YYYY-MM` and are calculated with UTC start-of-month and next-month boundaries. Prisma Decimal values are serialized to JSON numbers. Resource delete operations set `isArchived`; archived records are excluded by default where list queries provide that behavior.
 
-For frontend consumption patterns, see `dwmc-web/docs/frontend-api.md` in the sibling repository. When changing a contract, inspect that client before merging the backend change.
+For frontend consumption patterns, see `dwmc-web/docs/api.md` in the sibling repository. Authentication responsibilities are documented in [domains/auth.md](domains/auth.md). When changing a contract, inspect that client before merging the backend change.

@@ -25,7 +25,7 @@ The application uses soft archive flags instead of ordinary hard deletes. List q
 
 ## Financial Persistence
 
-Account `currentBalance`, budget `spent`, `remaining`, `progress`, and summary totals are computed values, not stored columns. Account and budget amounts use Prisma Decimal in storage and are serialized as JSON numbers by services. Transaction type determines which relations and calculations apply; see [transactions](transactions.md), [accounts](accounts.md), and [budgets](budgets.md).
+Account `currentBalance`, budget `spent`, `remaining`, `progress`, and summary totals are computed values, not stored columns. Account and budget amounts use Prisma Decimal in storage and are serialized as JSON numbers by services. Transaction type determines which relations and calculations apply; see [transactions](domains/transactions.md), [accounts](domains/accounts.md), and [budgets](domains/budgets.md).
 
 ## Migrations
 

@@ -20,4 +20,4 @@ All endpoints require authentication. Account names are unique per user. Delete 
 startingBalance + income - expenses + adjustments + incoming transfers - outgoing transfers
 ```
 
-Income, expense, and adjustment movements use `accountId`. Transfers use `fromAccountId` and `toAccountId`. See [API design](api.md) for response envelopes and the Prisma schema for storage types.
+Income, expense, and adjustment movements use `accountId`. Transfers use `fromAccountId` and `toAccountId`. See [API design](../api.md) for response envelopes and the Prisma schema for storage types.

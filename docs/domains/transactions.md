@@ -23,4 +23,4 @@ All endpoints require authentication. List filters include type, account relatio
 
 Transactions are archived with `isArchived: true` and excluded from default lists and calculations. Amounts are serialized from Prisma Decimal to numbers and dates to ISO strings.
 
-The frontend client patterns are documented in `dwmc-web/docs/frontend-api.md` in the sibling repository.
+The frontend client patterns are documented in `dwmc-web/docs/api.md` in the sibling repository.

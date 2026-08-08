@@ -1,48 +1,55 @@
 # Copilot Instructions for `dwmc-api`
 
-## Context
+## Project Overview
 
-This is the TypeScript/Hono backend for Dude, Where's My Cash?. It uses Prisma with PostgreSQL, Zod validation, Supabase Auth token validation, Vitest, ESLint, Prettier, Husky, and Changesets. Verify versions and scripts in `package.json`.
+`dwmc-api` is the Hono/TypeScript backend for Dude, Where's My Cash?. It owns persistence, authorization, validation, financial calculations, and the `/api/v1` contract. The sibling `../dwmc-web` repository consumes this API; cross-repository changes must be coordinated.
 
-The sibling `../dwmc-web` repository consumes this API. When changing an API contract consumed by the frontend, inspect `../dwmc-web` when available and identify the required client, query, UI, and documentation changes. Do not silently create an incompatible contract.
+## Documentation Hierarchy
 
-## Architecture
+Consult documentation in this order before making design decisions:
 
-- Keep HTTP concerns in `src/app.ts` and module `*.routes.ts` files.
-- Keep request schemas and inferred inputs in `*.schema.ts`.
-- Keep business rules, ownership resolution, calculations, and serialization in `*.service.ts`.
-- Keep Prisma queries in `*.repository.ts`.
-- Keep shared error, response, validation, pagination, money, and logging behavior under `src/shared`.
-- Register routes under `/api/v1` in `src/app.ts`.
+1. [Developer Playbook](../../dwmc-web/docs/dev-playbook.md) for shared development principles and feature workflow.
+2. [Engineering Audit Playbook](../../dwmc-web/docs/engineering-audit-playbook.md) for review scope, severity, and closure criteria.
+3. [Backend Architecture](../docs/architecture.md) and [frontend architecture](../../dwmc-web/docs/architecture.md) for responsibilities and boundaries.
+4. [API design](../docs/api.md), [database](../docs/database.md), [authentication](../docs/domains/auth.md), and the relevant [domain document](../docs/domains/) for contracts and business rules.
+5. ADRs, when present, for decisions that constrain the implementation.
+6. The relevant [README](../README.md) and package scripts for setup, commands, and repository orientation.
 
-Routes must stay thin. Do not put financial rules in repositories or raw Prisma queries in route handlers.
+Also consult [backend testing](../docs/testing.md), [frontend testing](../../dwmc-web/docs/testing.md), and [releasing](../docs/releasing.md) or [frontend releasing](../../dwmc-web/docs/releasing.md) when the change affects those areas. The roadmap is context, not a specification: do not implement planned work without confirmed scope.
 
-## Validation and Errors
+## Development Expectations
 
-Use Zod schemas with `validateBody` for JSON bodies and `parseOrThrow` for params/query strings. Throw `AppError` for expected failures. Never expose raw Prisma or Supabase errors. Use the response helpers in `src/shared/http/api-response.ts` for success, pagination, and errors.
+- Inspect the nearest existing module, route, service, repository, schema, and tests before adding a pattern.
+- Follow the documented architecture and module boundaries; prefer consistency over cleverness.
+- Keep routes thin, schemas responsible for input validation, services responsible for business rules and serialization, repositories responsible for Prisma access, and shared code genuinely cross-cutting.
+- Keep frontend and backend changes aligned. Verify request/response shapes, authentication, ownership, dates, money, and downstream effects in both repositories.
+- Avoid unrelated refactors, duplicate business logic, unnecessary abstractions, and breaking API changes.
 
-The public error codes are `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_ERROR`, `CONFLICT`, and `INTERNAL_SERVER_ERROR`. Verify individual status behavior in source and tests before documenting or changing it.
+## Documentation Expectations
 
-## Authentication and Ownership
+Update the relevant documentation in the same task whenever code changes affect architecture, API contracts, business rules, database behavior, engineering workflow, developer conventions, testing, release behavior, or roadmap status. Link to the canonical document instead of duplicating its content. Never leave documentation describing behavior that the implementation no longer provides.
 
-Protected routes use `authMiddleware`, which validates `Authorization: Bearer <Supabase access token>` with Supabase and sets `authUser`. Services resolve or create the local `UserProfile`; every query and mutation for user-owned data must be scoped to its `userProfileId`. Frontend route visibility is never authorization.
+## Engineering Expectations
 
-Never expose `SUPABASE_SERVICE_ROLE_KEY`, log tokens, or trust client-supplied ownership IDs.
+Preserve backend ownership and authorization boundaries. Keep financial calculations authoritative in services, persistence isolated in repositories, and public response behavior consistent with the API documentation and tests. Prefer small, comprehensible changes that fit the codebase over speculative generalization.
 
-## Prisma, Money, and Dates
+## Code Generation Rules
 
-- Read environment variables only through `src/config/env.ts`.
-- Keep Prisma access in repositories.
-- Run migrations for schema changes and regenerate the Prisma client.
-- Use `isArchived: true` for archive operations; do not hard-delete through current resource DELETE routes.
-- Serialize Prisma Decimal values to JSON numbers in services.
-- Use `YYYY-MM` for month values and UTC start-inclusive/end-exclusive month ranges.
-- Preserve the current transaction type rules and account/budget/summary calculations.
+- Read existing code, schemas, tests, and relevant documentation first.
+- Match local naming, module layout, formatting, and error/response conventions.
+- Modify existing code when appropriate instead of rewriting working paths.
+- Minimize breaking changes; use an explicit migration strategy for incompatible contracts.
+- Add meaningful regression coverage at the HTTP boundary where practical.
+- For schema changes, create the required Prisma migration, regenerate the client, and document migration implications.
 
-## Testing
+## Feature Development
 
-Use Vitest and the existing mocked Prisma/Supabase setup. Test HTTP status codes, envelopes, validation, authentication, ownership isolation, archive behavior, month boundaries, money calculations, budgets, summaries, and regressions. Do not add a test framework or require live credentials in the default suite without documenting the exception.
+For a new feature, consult the Developer Playbook, relevant backend and frontend architecture, the API/database/auth/domain documentation, and the testing guidance. Implement backend and frontend contract changes together when needed, then update tests and affected documentation. Verify ownership isolation, validation, archive behavior, month boundaries, money calculations, and response envelopes.
 
-## Migrations and Documentation
+## Engineering Audits
 
-After schema changes, use the repository's Prisma scripts and document migration implications. Keep `README.md` concise and update the relevant file under `docs/` for API, auth, database, architecture, testing, observability, release, or module behavior changes. Treat code, schemas, tests, and workflows as the source of truth. Never document planned behavior as implemented.
+Before considering a feature complete, follow the Engineering Audit Playbook. Evaluate implementation against documented standards, inspect integration and cross-feature effects, report evidence-based findings using its severity levels, and conclude with `READY TO CLOSE` or `NOT READY TO CLOSE` as defined there.
+
+## General Rules
+
+Copilot must not invent undocumented requirements, duplicate project documentation, introduce architectural patterns without justification, ignore existing conventions, weaken authorization, expose secrets, or leave implementation and documentation inconsistent. When documentation and assumptions conflict, inspect the code and tests, identify the discrepancy, and update the appropriate source and documentation together.
