@@ -157,6 +157,10 @@ const configurePrismaMocks = () => {
         if (where.type) result = result.filter((t) => t.type === where.type)
         if (where.accountId) result = result.filter((t) => t.accountId === where.accountId)
         if (where.categoryId) result = result.filter((t) => t.categoryId === where.categoryId)
+        if (where.date?.gte)
+            result = result.filter((t) => new Date(t.date) >= new Date(where.date.gte))
+        if (where.date?.lte)
+            result = result.filter((t) => new Date(t.date) <= new Date(where.date.lte))
         // naive ordering by date desc
         result = result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         if (skip) result = result.slice(skip)
@@ -170,7 +174,9 @@ const configurePrismaMocks = () => {
                 (where.isArchived === undefined ? true : t.isArchived === where.isArchived) &&
                 (where.type ? t.type === where.type : true) &&
                 (where.accountId ? t.accountId === where.accountId : true) &&
-                (where.categoryId ? t.categoryId === where.categoryId : true),
+                (where.categoryId ? t.categoryId === where.categoryId : true) &&
+                (where.date?.gte ? new Date(t.date) >= new Date(where.date.gte) : true) &&
+                (where.date?.lte ? new Date(t.date) <= new Date(where.date.lte) : true),
         ).length
     })
     ;(prisma.transaction.findFirst as any).mockImplementation(async ({ where }: any) => {
@@ -352,6 +358,297 @@ describe('Transactions API', () => {
         })
 
         expect(res.status).toBe(404)
+    })
+
+    it('Creating a transaction rejects archived accounts', async () => {
+        accounts.push({
+            id: 'archived-account',
+            userProfileId: 'profile-auth-user-1',
+            name: 'Archived',
+            type: 'CHECKING',
+            startingBalance: 0,
+            goal: null,
+            color: '#000',
+            icon: 'i',
+            isArchived: true,
+        })
+
+        const res = await app.request('/api/v1/transactions', {
+            method: 'POST',
+            headers: { ...authHeader(TOKEN_USER_1), 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                type: 'EXPENSE',
+                amount: 10,
+                date: '2026-06-01',
+                accountId: 'archived-account',
+            }),
+        })
+
+        expect(res.status).toBe(422)
+    })
+
+    it('Updating a transfer to an account transaction requires an account', async () => {
+        transactions.push({
+            id: 'transfer-to-expense',
+            userProfileId: 'profile-auth-user-1',
+            type: 'TRANSFER',
+            amount: 10,
+            date: '2026-06-01',
+            fromAccountId: 'from-account',
+            toAccountId: 'to-account',
+            accountId: null,
+            categoryId: null,
+            isArchived: false,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        })
+
+        const res = await app.request('/api/v1/transactions/transfer-to-expense', {
+            method: 'PATCH',
+            headers: { ...authHeader(TOKEN_USER_1), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'EXPENSE' }),
+        })
+
+        expect(res.status).toBe(422)
+    })
+
+    it('Updates an expense amount and recalculates the account balance', async () => {
+        accounts.push({
+            id: 'balance-account',
+            userProfileId: 'profile-auth-user-1',
+            name: 'Balance account',
+            type: 'CHECKING',
+            startingBalance: 100,
+            goal: null,
+            color: '#000',
+            icon: 'i',
+            isArchived: false,
+        })
+        transactions.push({
+            id: 'amount-edit',
+            userProfileId: 'profile-auth-user-1',
+            type: 'EXPENSE',
+            amount: 20,
+            date: '2026-06-01',
+            accountId: 'balance-account',
+            categoryId: null,
+            isArchived: false,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        })
+
+        const update = await app.request('/api/v1/transactions/amount-edit', {
+            method: 'PATCH',
+            headers: { ...authHeader(TOKEN_USER_1), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount: 50 }),
+        })
+        expect(update.status).toBe(200)
+
+        const account = await app.request('/api/v1/accounts/balance-account', {
+            headers: authHeader(TOKEN_USER_1),
+        })
+        expect(account.status).toBe(200)
+        expect(((await account.json()) as any).data.currentBalance).toBe(50)
+    })
+
+    it('Moves an expense to another account and removes the old account effect', async () => {
+        accounts.push(
+            {
+                id: 'old-account',
+                userProfileId: 'profile-auth-user-1',
+                name: 'Old account',
+                type: 'CHECKING',
+                startingBalance: 100,
+                goal: null,
+                color: '#000',
+                icon: 'i',
+                isArchived: false,
+            },
+            {
+                id: 'new-account',
+                userProfileId: 'profile-auth-user-1',
+                name: 'New account',
+                type: 'CHECKING',
+                startingBalance: 200,
+                goal: null,
+                color: '#000',
+                icon: 'i',
+                isArchived: false,
+            },
+        )
+        transactions.push({
+            id: 'account-edit',
+            userProfileId: 'profile-auth-user-1',
+            type: 'EXPENSE',
+            amount: 30,
+            date: '2026-06-01',
+            accountId: 'old-account',
+            categoryId: null,
+            isArchived: false,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        })
+
+        const update = await app.request('/api/v1/transactions/account-edit', {
+            method: 'PATCH',
+            headers: { ...authHeader(TOKEN_USER_1), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accountId: 'new-account' }),
+        })
+        expect(update.status).toBe(200)
+
+        const [oldAccount, newAccount] = await Promise.all([
+            app.request('/api/v1/accounts/old-account', { headers: authHeader(TOKEN_USER_1) }),
+            app.request('/api/v1/accounts/new-account', { headers: authHeader(TOKEN_USER_1) }),
+        ])
+        expect(((await oldAccount.json()) as any).data.currentBalance).toBe(100)
+        expect(((await newAccount.json()) as any).data.currentBalance).toBe(170)
+    })
+
+    it('Changes transaction type and normalizes its relations', async () => {
+        accounts.push({
+            id: 'type-account',
+            userProfileId: 'profile-auth-user-1',
+            name: 'Type account',
+            type: 'CHECKING',
+            startingBalance: 100,
+            goal: null,
+            color: '#000',
+            icon: 'i',
+            isArchived: false,
+        })
+        transactions.push({
+            id: 'type-edit',
+            userProfileId: 'profile-auth-user-1',
+            type: 'EXPENSE',
+            amount: 20,
+            date: '2026-06-01',
+            accountId: 'type-account',
+            categoryId: 'category-1',
+            isArchived: false,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        })
+
+        const update = await app.request('/api/v1/transactions/type-edit', {
+            method: 'PATCH',
+            headers: { ...authHeader(TOKEN_USER_1), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'ADJUSTMENT', amount: -5 }),
+        })
+        expect(update.status).toBe(200)
+        const body = (await update.json()) as any
+        expect(body.data).toMatchObject({
+            type: 'ADJUSTMENT',
+            amount: -5,
+            accountId: 'type-account',
+            categoryId: null,
+            fromAccountId: null,
+            toAccountId: null,
+        })
+
+        const account = await app.request('/api/v1/accounts/type-account', {
+            headers: authHeader(TOKEN_USER_1),
+        })
+        expect(((await account.json()) as any).data.currentBalance).toBe(95)
+    })
+
+    it('Changes transfer endpoints and recalculates both account balances', async () => {
+        for (const [id, startingBalance] of [
+            ['from-old', 100],
+            ['to-old', 50],
+            ['from-new', 200],
+            ['to-new', 75],
+        ] as const) {
+            accounts.push({
+                id,
+                userProfileId: 'profile-auth-user-1',
+                name: id,
+                type: 'CHECKING',
+                startingBalance,
+                goal: null,
+                color: '#000',
+                icon: 'i',
+                isArchived: false,
+            })
+        }
+        transactions.push({
+            id: 'transfer-edit',
+            userProfileId: 'profile-auth-user-1',
+            type: 'TRANSFER',
+            amount: 25,
+            date: '2026-06-01',
+            accountId: null,
+            fromAccountId: 'from-old',
+            toAccountId: 'to-old',
+            categoryId: null,
+            isArchived: false,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        })
+
+        const update = await app.request('/api/v1/transactions/transfer-edit', {
+            method: 'PATCH',
+            headers: { ...authHeader(TOKEN_USER_1), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fromAccountId: 'from-new', toAccountId: 'to-new' }),
+        })
+        expect(update.status).toBe(200)
+
+        const responses = await Promise.all(
+            ['from-old', 'to-old', 'from-new', 'to-new'].map((id) =>
+                app.request(`/api/v1/accounts/${id}`, { headers: authHeader(TOKEN_USER_1) }),
+            ),
+        )
+        const balances = await Promise.all(
+            responses.map(async (response) => ((await response.json()) as any).data.currentBalance),
+        )
+        expect(balances).toEqual([100, 50, 175, 100])
+    })
+
+    it('Moves a transaction across months and removes its old-month list result', async () => {
+        transactions.push({
+            id: 'month-edit',
+            userProfileId: 'profile-auth-user-1',
+            type: 'EXPENSE',
+            amount: 12,
+            date: '2026-05-31T00:00:00.000Z',
+            accountId: 'account-1',
+            categoryId: null,
+            isArchived: false,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        })
+
+        const update = await app.request('/api/v1/transactions/month-edit', {
+            method: 'PATCH',
+            headers: { ...authHeader(TOKEN_USER_1), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ date: '2026-06-01' }),
+        })
+        expect(update.status).toBe(200)
+
+        const [may, june] = await Promise.all([
+            app.request('/api/v1/transactions?month=2026-05', {
+                headers: authHeader(TOKEN_USER_1),
+            }),
+            app.request('/api/v1/transactions?month=2026-06', {
+                headers: authHeader(TOKEN_USER_1),
+            }),
+        ])
+        expect(((await may.json()) as any).meta.total).toBe(0)
+        expect(((await june.json()) as any).meta.total).toBe(1)
+    })
+
+    it('Rejects invalid transaction calendar dates', async () => {
+        const res = await app.request('/api/v1/transactions', {
+            method: 'POST',
+            headers: { ...authHeader(TOKEN_USER_1), 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                type: 'ADJUSTMENT',
+                amount: 1,
+                date: '2026-02-30',
+                accountId: 'account-1',
+            }),
+        })
+
+        expect(res.status).toBe(422)
     })
 
     it('Listing excludes archived by default and includeArchived=true includes archived', async () => {

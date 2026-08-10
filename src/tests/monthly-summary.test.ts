@@ -234,6 +234,59 @@ describe('Monthly Summary API', () => {
             expect(body.data.topExpenseCategories[0].percentage).toBe(0)
     })
 
+    it('keeps fractional expenses, negative adjustments, and transfers exact', async () => {
+        const iso = '2026-06-12T00:00:00.000Z'
+        transactions.push(
+            {
+                id: 'fractional-expense-1',
+                userProfileId: 'profile-auth-user-1',
+                type: 'EXPENSE',
+                amount: '0.1',
+                date: iso,
+                accountId: 'a1',
+                isArchived: false,
+            },
+            {
+                id: 'fractional-expense-2',
+                userProfileId: 'profile-auth-user-1',
+                type: 'EXPENSE',
+                amount: '0.2',
+                date: iso,
+                accountId: 'a1',
+                isArchived: false,
+            },
+            {
+                id: 'negative-adjustment',
+                userProfileId: 'profile-auth-user-1',
+                type: 'ADJUSTMENT',
+                amount: '-0.1',
+                date: iso,
+                accountId: 'a1',
+                isArchived: false,
+            },
+            {
+                id: 'fractional-transfer',
+                userProfileId: 'profile-auth-user-1',
+                type: 'TRANSFER',
+                amount: '0.3',
+                date: iso,
+                fromAccountId: 'a1',
+                toAccountId: 'a2',
+                isArchived: false,
+            },
+        )
+
+        const res = await app.request('/api/v1/summary/monthly?month=2026-06', {
+            headers: authHeader(TOKEN_USER_1),
+        })
+        const body = (await res.json()) as SuccessBody<any>
+
+        expect(body.data.totals.expenseTotal).toBe(0.3)
+        expect(body.data.totals.adjustmentTotal).toBe(-0.1)
+        expect(body.data.totals.transferTotal).toBe(0.3)
+        expect(body.data.totals.netTotal).toBe(-0.4)
+    })
+
     it('Does not include another user transactions', async () => {
         const iso = '2026-06-05T00:00:00.000Z'
         transactions.push({

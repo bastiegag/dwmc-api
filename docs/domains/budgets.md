@@ -10,7 +10,7 @@ A budget is a monthly spending target for one category. The unique key is user, 
 - `PATCH /api/v1/budgets/:id`: update category, month, or amount while preserving uniqueness.
 - `DELETE /api/v1/budgets/:id`: archive the budget.
 
-All endpoints require authentication. The category must belong to the current user, the month must be `YYYY-MM`, and amount validation is enforced by the budget schema. Duplicate category/month budgets return conflict responses.
+All endpoints require authentication. The category must belong to the current user, the month must be a valid calendar month in `YYYY-MM` form, and amount validation is enforced by the budget schema. Archived categories cannot receive new budgets, but remain available when an existing historical budget is edited. Duplicate category/month budgets return conflict responses, including database-level uniqueness races.
 
 ## Spending Calculation
 

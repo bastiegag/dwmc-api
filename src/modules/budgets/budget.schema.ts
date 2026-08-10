@@ -1,5 +1,13 @@
 import { z } from 'zod'
 
+const monthSchema = z
+    .string()
+    .regex(/^\d{4}-\d{2}$/, 'Month must use YYYY-MM format')
+    .refine((value) => {
+        const month = Number(value.slice(5))
+        return month >= 1 && month <= 12
+    }, 'Month must be a valid calendar month')
+
 const queryBooleanSchema = z
     .enum(['true', 'false'])
     .optional()
@@ -7,16 +15,13 @@ const queryBooleanSchema = z
 
 export const createBudgetSchema = z.object({
     categoryId: z.string().min(1),
-    month: z.string().regex(/^\d{4}-\d{2}$/),
+    month: monthSchema,
     amount: z.coerce.number().min(0),
 })
 
 export const updateBudgetSchema = z.object({
     categoryId: z.string().min(1).optional(),
-    month: z
-        .string()
-        .regex(/^\d{4}-\d{2}$/)
-        .optional(),
+    month: monthSchema.optional(),
     amount: z.coerce.number().min(0).optional(),
     isArchived: z.boolean().optional(),
 })
@@ -24,10 +29,7 @@ export const updateBudgetSchema = z.object({
 export const budgetParamsSchema = z.object({ id: z.string().min(1) })
 
 export const getBudgetsQuerySchema = z.object({
-    month: z
-        .string()
-        .regex(/^\d{4}-\d{2}$/)
-        .optional(),
+    month: monthSchema.optional(),
     categoryId: z.string().min(1).optional(),
     includeArchived: queryBooleanSchema,
 })
