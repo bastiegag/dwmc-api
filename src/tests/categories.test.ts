@@ -24,6 +24,7 @@ vi.mock('../lib/supabase.js', () => ({
 
 vi.mock('../db/prisma.js', () => ({
     prisma: {
+        $transaction: vi.fn(),
         $queryRaw: vi.fn(),
         userProfile: {
             upsert: vi.fn(),
@@ -95,6 +96,7 @@ const configureSupabaseMock = () => {
 }
 
 const configurePrismaMocks = () => {
+    ;(prisma.$transaction as any).mockImplementation(async (callback: any) => callback(prisma))
     ;(prisma.userProfile.upsert as any).mockImplementation(
         async ({ where, update, create }: any) => {
             const existing = profilesByAuthUserId.get(where.authUserId)
@@ -131,6 +133,9 @@ const configurePrismaMocks = () => {
             if (where.userProfileId && section.userProfileId !== where.userProfileId) {
                 return false
             }
+            if (where.isArchived !== undefined && section.isArchived !== where.isArchived) {
+                return false
+            }
             if (where.name && section.name !== where.name) {
                 return false
             }
@@ -153,6 +158,26 @@ const configurePrismaMocks = () => {
 
         sections.push(section)
         return clone(section)
+    })
+    ;(prisma.section.update as any).mockImplementation(async ({ where, data }: any) => {
+        const index = sections.findIndex(
+            (section) => section.id === where.id && section.userProfileId === where.userProfileId,
+        )
+        if (index < 0) {
+            throw new Error('Section not found')
+        }
+
+        const current = sections[index] as Section
+        const next = {
+            ...current,
+            ...(data.name !== undefined ? { name: data.name } : {}),
+            ...(data.color !== undefined ? { color: data.color } : {}),
+            ...(data.isArchived !== undefined ? { isArchived: data.isArchived } : {}),
+            updatedAt: new Date(),
+        }
+
+        sections[index] = next
+        return clone(next)
     })
     ;(prisma.category.findMany as any).mockImplementation(
         async ({ where, orderBy, take, cursor, skip }: any) => {
@@ -359,6 +384,30 @@ describe('Categories API', () => {
         expect(body.error.code).toBe('VALIDATION_ERROR')
     })
 
+    it('creating a category rejects an archived section', async () => {
+        const section = await createSectionFor(TOKEN_USER_1, 'Food')
+
+        await app.request(`/api/v1/sections/${section.id}`, {
+            method: 'DELETE',
+            headers: authHeader(TOKEN_USER_1),
+        })
+
+        const res = await app.request('/api/v1/categories', {
+            method: 'POST',
+            headers: {
+                ...authHeader(TOKEN_USER_1),
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: 'Groceries',
+                icon: 'shopping-cart',
+                sectionId: section.id,
+            }),
+        })
+
+        expect(res.status).toBe(400)
+    })
+
     it('creating a duplicate category in the same section returns 409', async () => {
         const section = await createSectionFor(TOKEN_USER_1, 'Food')
 
@@ -563,6 +612,41 @@ describe('Categories API', () => {
         expect(res.status).toBe(200)
         const body = (await res.json()) as SuccessBody<Category>
         expect(body.data.sectionId).toBe(homeSection.id)
+    })
+
+    it('PATCH /api/v1/categories/:id rejects moving to an archived section', async () => {
+        const foodSection = await createSectionFor(TOKEN_USER_1, 'Food')
+        const archivedSection = await createSectionFor(TOKEN_USER_1, 'Archived')
+
+        const createRes = await app.request('/api/v1/categories', {
+            method: 'POST',
+            headers: {
+                ...authHeader(TOKEN_USER_1),
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: 'Groceries',
+                icon: 'shopping-cart',
+                sectionId: foodSection.id,
+            }),
+        })
+        const created = (await createRes.json()) as SuccessBody<Category>
+
+        await app.request(`/api/v1/sections/${archivedSection.id}`, {
+            method: 'DELETE',
+            headers: authHeader(TOKEN_USER_1),
+        })
+
+        const res = await app.request(`/api/v1/categories/${created.data.id}`, {
+            method: 'PATCH',
+            headers: {
+                ...authHeader(TOKEN_USER_1),
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ sectionId: archivedSection.id }),
+        })
+
+        expect(res.status).toBe(400)
     })
 
     it("PATCH /api/v1/categories/:id cannot move a category to another user's section", async () => {

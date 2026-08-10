@@ -24,6 +24,7 @@ vi.mock('../lib/supabase.js', () => ({
 
 vi.mock('../db/prisma.js', () => ({
     prisma: {
+        $transaction: vi.fn(),
         $queryRaw: vi.fn(),
         userProfile: {
             upsert: vi.fn(),
@@ -86,6 +87,7 @@ let sections: Section[] = []
 let categories: Category[] = []
 let sectionCounter = 1
 let categoryCounter = 1
+let failSectionArchiveUpdate = false
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- Vitest/Prisma mock interop */
 const configureSupabaseMock = () => {
@@ -95,6 +97,18 @@ const configureSupabaseMock = () => {
 }
 
 const configurePrismaMocks = () => {
+    ;(prisma.$transaction as any).mockImplementation(async (callback: any) => {
+        const sectionsBeforeTransaction = clone(sections)
+        const categoriesBeforeTransaction = clone(categories)
+
+        try {
+            return await callback(prisma)
+        } catch (error) {
+            sections = sectionsBeforeTransaction
+            categories = categoriesBeforeTransaction
+            throw error
+        }
+    })
     ;(prisma.userProfile.upsert as any).mockImplementation(
         async ({ where, update, create }: any) => {
             const existing = profilesByAuthUserId.get(where.authUserId)
@@ -219,6 +233,11 @@ const configurePrismaMocks = () => {
         return clone(section)
     })
     ;(prisma.section.update as any).mockImplementation(async ({ where, data }: any) => {
+        if (data.isArchived === true && failSectionArchiveUpdate) {
+            failSectionArchiveUpdate = false
+            throw new Error('Section archive failed')
+        }
+
         const index = sections.findIndex((section) => section.id === where.id)
         if (index < 0) {
             throw new Error('Section not found')
@@ -286,6 +305,7 @@ describe('Sections API', () => {
         categories = []
         sectionCounter = 1
         categoryCounter = 1
+        failSectionArchiveUpdate = false
 
         configureSupabaseMock()
         configurePrismaMocks()
@@ -456,6 +476,45 @@ describe('Sections API', () => {
         expect(res.status).toBe(200)
         const body = (await res.json()) as SuccessBody<Section>
         expect(body.data.isArchived).toBe(true)
+    })
+
+    it('DELETE /api/v1/sections/:id rolls back child category archival when section archival fails', async () => {
+        const createRes = await app.request('/api/v1/sections', {
+            method: 'POST',
+            headers: {
+                ...authHeader(TOKEN_USER_1),
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ name: 'Food', color: '#22c55e' }),
+        })
+        const created = (await createRes.json()) as SuccessBody<Section>
+        const profile = profilesByAuthUserId.get('auth-user-1')
+        if (!profile) {
+            throw new Error('Missing profile')
+        }
+
+        categories.push({
+            id: `category-${categoryCounter++}`,
+            userProfileId: profile.id,
+            sectionId: created.data.id,
+            name: 'Groceries',
+            icon: 'shopping-cart',
+            isArchived: false,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        })
+        failSectionArchiveUpdate = true
+
+        const res = await app.request(`/api/v1/sections/${created.data.id}`, {
+            method: 'DELETE',
+            headers: authHeader(TOKEN_USER_1),
+        })
+
+        expect(res.status).toBe(500)
+        expect(sections.find((section) => section.id === created.data.id)?.isArchived).toBe(false)
+        expect(
+            categories.find((category) => category.sectionId === created.data.id)?.isArchived,
+        ).toBe(false)
     })
 
     it('archived sections are excluded by default', async () => {

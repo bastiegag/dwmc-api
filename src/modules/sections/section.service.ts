@@ -2,8 +2,7 @@ import type { AuthUser } from '../../types/app.js'
 import { AppError } from '../../shared/errors/AppError.js'
 import { getOrCreateUserProfile } from '../auth/auth.service.js'
 import {
-    archiveCategoriesForSection,
-    archiveForUser,
+    archiveSectionWithCategoriesForUser,
     createForUser,
     findByIdForUser,
     findDuplicateByName,
@@ -85,8 +84,7 @@ export const archiveSection = async (authUser: AuthUser, id: string) => {
         throw new AppError('NOT_FOUND', 'Section not found', 404)
     }
 
-    await archiveCategoriesForSection(id, profile.id)
-    const archived = await archiveForUser(id, profile.id)
+    const archived = await archiveSectionWithCategoriesForUser(id, profile.id)
     if (!archived) {
         throw new AppError('NOT_FOUND', 'Section not found', 404)
     }

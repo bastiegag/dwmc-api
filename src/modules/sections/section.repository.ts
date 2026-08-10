@@ -59,6 +59,12 @@ export const findByIdForUser = async (
     })
 }
 
+export const findActiveByIdForUser = async (id: string, userProfileId: string) => {
+    return prisma.section.findFirst({
+        where: { id, userProfileId, isArchived: false },
+    })
+}
+
 export const createForUser = async (
     userProfileId: string,
     data: { name: string; color: string },
@@ -90,11 +96,18 @@ export const updateForUser = async (
     }
 }
 
-export const archiveForUser = async (id: string, userProfileId: string) => {
+export const archiveSectionWithCategoriesForUser = async (id: string, userProfileId: string) => {
     try {
-        return await prisma.section.update({
-            where: { id, userProfileId },
-            data: { isArchived: true },
+        return await prisma.$transaction(async (transaction) => {
+            await transaction.category.updateMany({
+                where: { sectionId: id, userProfileId },
+                data: { isArchived: true },
+            })
+
+            return transaction.section.update({
+                where: { id, userProfileId },
+                data: { isArchived: true },
+            })
         })
     } catch (e) {
         if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025') {
