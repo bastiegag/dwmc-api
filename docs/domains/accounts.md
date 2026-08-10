@@ -12,6 +12,12 @@ Accounts represent places where money is tracked. Supported types are `CHECKING`
 
 All endpoints require authentication. Account names are unique per user. Delete is a soft archive operation.
 
+## Starting Balance and Goals
+
+`startingBalance` is the account's baseline at setup. It is included once in the computed current balance. Changing it changes the baseline for the account's calculated balance; it does not create a historical financial event.
+
+`goal` is an optional positive savings target and is supported only for `SAVINGS` accounts. Other account types must use `null`.
+
 ## Balance
 
 `currentBalance` is computed and returned as a number; it is not stored. For non-archived transactions owned by the user:

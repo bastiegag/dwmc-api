@@ -1,5 +1,5 @@
 import { prisma } from '../../db/prisma.js'
-import { serializeDecimal } from '../../shared/money/decimal.js'
+import { fromCents, toCents } from '../../shared/money/decimal.js'
 
 /**
  * Calculate current account balance by aggregating non-archived transactions.
@@ -34,20 +34,22 @@ export const calculateAccountBalance = async (
         where: { userProfileId, type: 'TRANSFER', fromAccountId: accountId, isArchived: false },
     })
 
-    const sum = (val: unknown) => {
+    const sum = (val: unknown): bigint => {
         const v = val as { _sum?: { amount?: unknown } } | undefined
-        return v && v._sum && v._sum.amount ? serializeDecimal(v._sum.amount) : 0
+        return v && v._sum && v._sum.amount !== null && v._sum.amount !== undefined
+            ? toCents(v._sum.amount)
+            : 0n
     }
 
-    const total =
-        startingBalance +
+    const totalCents =
+        toCents(startingBalance) +
         sum(income) -
         sum(expense) +
         sum(adjustment) +
         sum(incoming) -
         sum(outgoing)
 
-    return total
+    return fromCents(totalCents)
 }
 
 export default { calculateAccountBalance }

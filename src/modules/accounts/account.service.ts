@@ -19,7 +19,6 @@ import type {
 
 /**
  * Converts Prisma Decimal fields to numbers and adds the computed `currentBalance` field.
- * currentBalance equals startingBalance until transactions are implemented.
  */
 const serializeAccount = (account: Account) => {
     const startingBalance = Number(account.startingBalance)
@@ -28,6 +27,16 @@ const serializeAccount = (account: Account) => {
         startingBalance,
         goal: account.goal !== null ? Number(account.goal) : null,
         currentBalance: startingBalance,
+    }
+}
+
+const validateGoal = (type: Account['type'], goal: number | null | undefined) => {
+    if (goal !== null && goal !== undefined && type !== 'SAVINGS') {
+        throw new AppError(
+            'VALIDATION_ERROR',
+            'Goals are only supported for savings accounts.',
+            422,
+        )
     }
 }
 
@@ -54,6 +63,8 @@ export const listAccounts = async (authUser: AuthUser, query: GetAccountsQueryIn
 
 export const createAccount = async (authUser: AuthUser, input: CreateAccountInput) => {
     const profile = await getOrCreateUserProfile(authUser)
+    const type = input.type ?? 'CHECKING'
+    validateGoal(type, input.goal)
 
     const duplicate = await findDuplicateByName(profile.id, input.name)
     if (duplicate) {
@@ -62,7 +73,7 @@ export const createAccount = async (authUser: AuthUser, input: CreateAccountInpu
 
     const account = await createForUser(profile.id, {
         name: input.name,
-        type: input.type ?? 'CHECKING',
+        type,
         startingBalance: input.startingBalance ?? 0,
         goal: input.goal ?? null,
         color: input.color,
@@ -107,6 +118,15 @@ export const updateAccount = async (authUser: AuthUser, id: string, input: Updat
             throw new AppError('CONFLICT', 'Account name already exists', 409)
         }
     }
+
+    const resultingType = input.type ?? existing.type
+    const resultingGoal =
+        input.goal !== undefined
+            ? input.goal
+            : existing.goal !== null
+              ? Number(existing.goal)
+              : null
+    validateGoal(resultingType, resultingGoal)
 
     const updated = await updateForUser(id, profile.id, {
         ...(input.name !== undefined ? { name: input.name } : {}),

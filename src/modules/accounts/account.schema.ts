@@ -19,7 +19,7 @@ export const createAccountSchema = z.object({
     name: z.string().trim().min(1).max(80),
     type: accountTypeSchema.optional(),
     startingBalance: z.coerce.number().optional(),
-    goal: z.coerce.number().nullable().optional(),
+    goal: z.coerce.number().positive().nullable().optional(),
     color: z.string().trim().min(1).max(40),
     icon: z.string().trim().min(1).max(80),
 })
@@ -28,7 +28,7 @@ export const updateAccountSchema = z.object({
     name: z.string().trim().min(1).max(80).optional(),
     type: accountTypeSchema.optional(),
     startingBalance: z.coerce.number().optional(),
-    goal: z.coerce.number().nullable().optional(),
+    goal: z.coerce.number().positive().nullable().optional(),
     color: z.string().trim().min(1).max(40).optional(),
     icon: z.string().trim().min(1).max(80).optional(),
     isArchived: z.boolean().optional(),

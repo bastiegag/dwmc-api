@@ -86,6 +86,7 @@ const TOKEN_USER_2 = TEST_AUTH_USER_2.token
 const profilesByAuthUserId = new Map<string, Profile>()
 let accounts: Account[] = []
 let accountCounter = 1
+let balanceSums: Record<string, number> = {}
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- Vitest/Prisma mock interop */
 const configureSupabaseMock = () => {
@@ -200,8 +201,13 @@ const configurePrismaMocks = () => {
         return clone(next)
     })
     ;(prisma.transaction.aggregate as any).mockImplementation(async (_: any) => {
-        // default zero sums for accounts tests
-        return { _sum: { amount: 0 } }
+        const { where } = _
+        const key = where.toAccountId
+            ? 'TRANSFER_IN'
+            : where.fromAccountId
+              ? 'TRANSFER_OUT'
+              : where.type
+        return { _sum: { amount: balanceSums[key] ?? 0 } }
     })
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -212,6 +218,7 @@ describe('Accounts API', () => {
         profilesByAuthUserId.clear()
         accounts = []
         accountCounter = 1
+        balanceSums = {}
 
         configureSupabaseMock()
         configurePrismaMocks()
@@ -560,6 +567,72 @@ describe('Accounts API', () => {
         expect(body.data.currentBalance).toBe(body.data.startingBalance)
     })
 
+    it('calculates currentBalance from starting balance and transaction movements', async () => {
+        const createRes = await app.request('/api/v1/accounts', {
+            method: 'POST',
+            headers: {
+                ...authHeader(TOKEN_USER_1),
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: 'Checking',
+                startingBalance: 100,
+                color: '#3b82f6',
+                icon: 'wallet',
+            }),
+        })
+        const created = (await createRes.json()) as SuccessBody<SerializedAccount>
+
+        balanceSums = {
+            INCOME: 250.25,
+            EXPENSE: 80.1,
+            ADJUSTMENT: -10,
+            TRANSFER_IN: 50,
+            TRANSFER_OUT: 20,
+        }
+
+        const res = await app.request(`/api/v1/accounts/${created.data.id}`, {
+            headers: authHeader(TOKEN_USER_1),
+        })
+
+        expect(res.status).toBe(200)
+        const body = (await res.json()) as SuccessBody<SerializedAccount>
+        expect(body.data.currentBalance).toBeCloseTo(290.15, 10)
+    })
+
+    it('calculates fractional cents exactly across negative balances and transfers', async () => {
+        const createRes = await app.request('/api/v1/accounts', {
+            method: 'POST',
+            headers: {
+                ...authHeader(TOKEN_USER_1),
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: 'Precise Balance',
+                startingBalance: -0.1,
+                color: '#3b82f6',
+                icon: 'wallet',
+            }),
+        })
+        const created = (await createRes.json()) as SuccessBody<SerializedAccount>
+
+        balanceSums = {
+            INCOME: 0.2,
+            EXPENSE: 0.1,
+            ADJUSTMENT: -0.3,
+            TRANSFER_IN: 0.4,
+            TRANSFER_OUT: 0.2,
+        }
+
+        const res = await app.request(`/api/v1/accounts/${created.data.id}`, {
+            headers: authHeader(TOKEN_USER_1),
+        })
+
+        expect(res.status).toBe(200)
+        const body = (await res.json()) as SuccessBody<SerializedAccount>
+        expect(body.data.currentBalance).toBe(-0.1)
+    })
+
     it('negative startingBalance is allowed for credit cards or loans', async () => {
         const res = await app.request('/api/v1/accounts', {
             method: 'POST',
@@ -580,5 +653,63 @@ describe('Accounts API', () => {
         const body = (await res.json()) as SuccessBody<SerializedAccount>
         expect(body.data.startingBalance).toBe(-850)
         expect(body.data.currentBalance).toBe(-850)
+    })
+
+    it('accepts a positive goal only for savings accounts', async () => {
+        const savingsRes = await app.request('/api/v1/accounts', {
+            method: 'POST',
+            headers: {
+                ...authHeader(TOKEN_USER_1),
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: 'Emergency Fund',
+                type: 'SAVINGS',
+                goal: 10000,
+                color: '#22c55e',
+                icon: 'piggy-bank',
+            }),
+        })
+
+        expect(savingsRes.status).toBe(201)
+        const savingsBody = (await savingsRes.json()) as SuccessBody<SerializedAccount>
+        expect(savingsBody.data.goal).toBe(10000)
+
+        const checkingRes = await app.request('/api/v1/accounts', {
+            method: 'POST',
+            headers: {
+                ...authHeader(TOKEN_USER_1),
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: 'Checking Goal',
+                goal: 100,
+                color: '#3b82f6',
+                icon: 'wallet',
+            }),
+        })
+
+        expect(checkingRes.status).toBe(422)
+    })
+
+    it('rejects zero and negative goals', async () => {
+        for (const goal of [0, -1]) {
+            const res = await app.request('/api/v1/accounts', {
+                method: 'POST',
+                headers: {
+                    ...authHeader(TOKEN_USER_1),
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: `Invalid goal ${goal}`,
+                    type: 'SAVINGS',
+                    goal,
+                    color: '#22c55e',
+                    icon: 'piggy-bank',
+                }),
+            })
+
+            expect(res.status).toBe(422)
+        }
     })
 })

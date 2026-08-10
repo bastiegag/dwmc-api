@@ -21,6 +21,8 @@ All endpoints require authentication. List filters include type, account relatio
 - Adjustment amounts may be negative, zero, or positive.
 - Referenced accounts and categories must belong to the authenticated user.
 
+Adjustments are the traceable way to reconcile a calculated account balance with reality. A positive adjustment increases the account balance and a negative adjustment decreases it. Use the account's starting balance for the initial baseline, not for later reconciliation events.
+
 Transactions are archived with `isArchived: true` and excluded from default lists and calculations. Amounts are serialized from Prisma Decimal to numbers and dates to ISO strings.
 
 The frontend client patterns are documented in `dwmc-web/docs/api.md` in the sibling repository.

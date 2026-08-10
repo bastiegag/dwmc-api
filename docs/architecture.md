@@ -31,6 +31,14 @@ Each domain module under `src/modules/<name>/` owns its route, schema, service, 
 
 Routes stay thin. Do not put financial rules in route handlers or HTTP formatting in repositories.
 
+## Money Arithmetic
+
+Persisted monetary values use two decimal places. When the API calculates derived balances, it
+converts each operand to integer cents, performs the calculation with `bigint`, and serializes the
+result back to a number at the response boundary. This avoids binary floating-point accumulation
+while preserving the existing JSON contract. Inputs beyond two decimal places are rounded to the
+nearest cent before aggregation.
+
 ## Current Modules
 
 - `auth`: token middleware, profile synchronization, and `/auth/me`.
