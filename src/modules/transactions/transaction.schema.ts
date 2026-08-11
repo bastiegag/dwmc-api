@@ -7,7 +7,7 @@ const queryBooleanSchema = z
 
 export const transactionTypeSchema = z.enum(['INCOME', 'EXPENSE', 'TRANSFER', 'ADJUSTMENT'])
 
-const transactionDateSchema = z
+export const transactionDateSchema = z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .refine(
@@ -94,15 +94,13 @@ export const getTransactionsQuerySchema = z.object({
     month: z
         .string()
         .regex(/^\d{4}-\d{2}$/)
+        .refine((value) => {
+            const month = Number(value.slice(5))
+            return month >= 1 && month <= 12
+        }, 'Month must be a valid calendar month')
         .optional(),
-    startDate: z
-        .string()
-        .regex(/^\d{4}-\d{2}-\d{2}$/)
-        .optional(),
-    endDate: z
-        .string()
-        .regex(/^\d{4}-\d{2}-\d{2}$/)
-        .optional(),
+    startDate: transactionDateSchema.optional(),
+    endDate: transactionDateSchema.optional(),
     search: z.string().trim().max(120).optional(),
     includeArchived: queryBooleanSchema,
     page: z.coerce.number().int().positive().default(1),

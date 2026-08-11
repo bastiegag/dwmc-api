@@ -37,6 +37,7 @@ vi.mock('../db/prisma.js', () => ({
             update: vi.fn(),
             count: vi.fn(),
             aggregate: vi.fn(),
+            groupBy: vi.fn(),
         },
     },
 }))
@@ -242,6 +243,35 @@ const configurePrismaMocks = () => {
             filtered = filtered.filter((t) => t.fromAccountId === where.fromAccountId)
         const sum = filtered.reduce((s, t) => s + Number(t.amount), 0)
         return { _sum: { amount: sum } }
+    })
+    ;(prisma.transaction.groupBy as any).mockImplementation(async ({ where }: any) => {
+        const filtered = transactions.filter((t) => {
+            if (t.userProfileId !== where.userProfileId || t.isArchived !== false) return false
+            return where.OR?.some(
+                (condition: any) =>
+                    (condition.accountId?.in && condition.accountId.in.includes(t.accountId)) ||
+                    (condition.fromAccountId?.in &&
+                        condition.fromAccountId.in.includes(t.fromAccountId)) ||
+                    (condition.toAccountId?.in && condition.toAccountId.in.includes(t.toAccountId)),
+            )
+        })
+        const grouped = new Map<string, any>()
+        for (const t of filtered) {
+            const key = [t.type, t.accountId, t.fromAccountId, t.toAccountId].join('|')
+            const existing = grouped.get(key)
+            if (existing) {
+                existing._sum.amount += Number(t.amount)
+                continue
+            }
+            grouped.set(key, {
+                type: t.type,
+                accountId: t.accountId ?? null,
+                fromAccountId: t.fromAccountId ?? null,
+                toAccountId: t.toAccountId ?? null,
+                _sum: { amount: Number(t.amount) },
+            })
+        }
+        return [...grouped.values()]
     })
 }
 
@@ -646,6 +676,22 @@ describe('Transactions API', () => {
                 date: '2026-02-30',
                 accountId: 'account-1',
             }),
+        })
+
+        expect(res.status).toBe(422)
+    })
+
+    it('Rejects invalid transaction month filters', async () => {
+        const res = await app.request('/api/v1/transactions?month=2026-13', {
+            headers: authHeader(TOKEN_USER_1),
+        })
+
+        expect(res.status).toBe(422)
+    })
+
+    it('Rejects invalid transaction date filters', async () => {
+        const res = await app.request('/api/v1/transactions?startDate=2026-02-30', {
+            headers: authHeader(TOKEN_USER_1),
         })
 
         expect(res.status).toBe(422)

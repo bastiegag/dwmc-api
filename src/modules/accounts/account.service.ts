@@ -10,7 +10,7 @@ import {
     findManyByUserProfileId,
     updateForUser,
 } from './account.repository.js'
-import { calculateAccountBalance } from './account-balance.service.js'
+import { calculateAccountBalance, calculateAccountBalances } from './account-balance.service.js'
 import type {
     CreateAccountInput,
     GetAccountsQueryInput,
@@ -46,19 +46,18 @@ export const listAccounts = async (authUser: AuthUser, query: GetAccountsQueryIn
         includeArchived: query.includeArchived,
         type: query.type,
     })
-    // Compute balances in parallel
-    const withBalances = await Promise.all(
-        accounts.map(async (a) => {
-            const currentBalance = await calculateAccountBalance(
-                profile.id,
-                a.id,
-                Number(a.startingBalance),
-            )
-            return { ...serializeAccount(a), currentBalance }
-        }),
+    const balances = await calculateAccountBalances(
+        profile.id,
+        accounts.map((account) => ({
+            id: account.id,
+            startingBalance: Number(account.startingBalance),
+        })),
     )
 
-    return withBalances
+    return accounts.map((account) => ({
+        ...serializeAccount(account),
+        currentBalance: balances.get(account.id) ?? Number(account.startingBalance),
+    }))
 }
 
 export const createAccount = async (authUser: AuthUser, input: CreateAccountInput) => {

@@ -3,6 +3,7 @@ import { Prisma, type Prisma as PrismaTypes } from '@prisma/client'
 import { AppError } from '../../shared/errors/AppError.js'
 import { getOrCreateUserProfile } from '../auth/auth.service.js'
 import { fromCents, toCents } from '../../shared/money/decimal.js'
+import { getUtcMonthRange } from '../../shared/date/month.js'
 import {
     findManyByUserProfileId,
     findByIdForUser,
@@ -14,15 +15,6 @@ import {
 } from './budget.repository.js'
 import { findByIdForUser as findCategoryByIdForUser } from '../categories/category.repository.js'
 import type { CreateBudgetInput, UpdateBudgetInput, GetBudgetsQueryInput } from './budget.schema.js'
-
-const monthToRange = (month: string) => {
-    const [yStr, mStr] = month.split('-')
-    const y = Number(yStr)
-    const m = Number(mStr)
-    const start = new Date(Date.UTC(y, m - 1, 1))
-    const next = new Date(Date.UTC(y, m, 1))
-    return { startIso: start.toISOString(), nextIso: next.toISOString() }
-}
 
 const computeProgress = (amountCents: bigint, spentCents: bigint) => {
     if (amountCents === 0n) return spentCents === 0n ? 0 : 100
@@ -100,7 +92,7 @@ export const listBudgets = async (authUser: AuthUser, query: GetBudgetsQueryInpu
         includeArchived: Boolean(query.includeArchived),
     })
 
-    const { startIso, nextIso } = monthToRange(month)
+    const { startIso, nextIso } = getUtcMonthRange(month)
     const aggs = (await findExpenseTotalsByCategoryForMonth(
         profile.id,
         startIso,
@@ -154,7 +146,7 @@ export const createBudget = async (authUser: AuthUser, input: CreateBudgetInput)
         throw error
     }
 
-    const { startIso, nextIso } = monthToRange(input.month)
+    const { startIso, nextIso } = getUtcMonthRange(input.month)
     const aggs = (await findExpenseTotalsByCategoryForMonth(
         profile.id,
         startIso,
@@ -173,7 +165,7 @@ export const getBudgetById = async (authUser: AuthUser, id: string) => {
     const b = await findByIdForUser(id, profile.id)
     if (!b) throw new AppError('NOT_FOUND', 'Budget not found', 404)
 
-    const { startIso, nextIso } = monthToRange(b.month)
+    const { startIso, nextIso } = getUtcMonthRange(b.month)
     const aggs = (await findExpenseTotalsByCategoryForMonth(
         profile.id,
         startIso,
@@ -232,7 +224,7 @@ export const updateBudget = async (authUser: AuthUser, id: string, input: Update
     }
     if (!updated) throw new AppError('NOT_FOUND', 'Budget not found', 404)
 
-    const { startIso, nextIso } = monthToRange(updated.month)
+    const { startIso, nextIso } = getUtcMonthRange(updated.month)
     const aggs = (await findExpenseTotalsByCategoryForMonth(
         profile.id,
         startIso,
@@ -251,7 +243,7 @@ export const archiveBudget = async (authUser: AuthUser, id: string) => {
     const archived = await archiveForUser(id, profile.id)
     if (!archived) throw new AppError('NOT_FOUND', 'Budget not found', 404)
 
-    const { startIso, nextIso } = monthToRange(archived.month)
+    const { startIso, nextIso } = getUtcMonthRange(archived.month)
     const aggs = (await findExpenseTotalsByCategoryForMonth(
         profile.id,
         startIso,

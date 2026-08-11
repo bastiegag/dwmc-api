@@ -35,6 +35,7 @@ vi.mock('../db/prisma.js', () => ({
         },
         transaction: {
             aggregate: vi.fn(),
+            groupBy: vi.fn(),
         },
     },
 }))
@@ -200,14 +201,47 @@ const configurePrismaMocks = () => {
         accounts[index] = next
         return clone(next)
     })
-    ;(prisma.transaction.aggregate as any).mockImplementation(async (_: any) => {
-        const { where } = _
-        const key = where.toAccountId
-            ? 'TRANSFER_IN'
-            : where.fromAccountId
-              ? 'TRANSFER_OUT'
-              : where.type
-        return { _sum: { amount: balanceSums[key] ?? 0 } }
+    ;(prisma.transaction.groupBy as any).mockImplementation(async () => {
+        const accountId = accounts[0]?.id
+        if (!accountId) return []
+
+        return [
+            {
+                type: 'INCOME',
+                accountId,
+                fromAccountId: null,
+                toAccountId: null,
+                _sum: { amount: balanceSums.INCOME ?? 0 },
+            },
+            {
+                type: 'EXPENSE',
+                accountId,
+                fromAccountId: null,
+                toAccountId: null,
+                _sum: { amount: balanceSums.EXPENSE ?? 0 },
+            },
+            {
+                type: 'ADJUSTMENT',
+                accountId,
+                fromAccountId: null,
+                toAccountId: null,
+                _sum: { amount: balanceSums.ADJUSTMENT ?? 0 },
+            },
+            {
+                type: 'TRANSFER',
+                accountId: null,
+                fromAccountId: null,
+                toAccountId: accountId,
+                _sum: { amount: balanceSums.TRANSFER_IN ?? 0 },
+            },
+            {
+                type: 'TRANSFER',
+                accountId: null,
+                fromAccountId: accountId,
+                toAccountId: null,
+                _sum: { amount: balanceSums.TRANSFER_OUT ?? 0 },
+            },
+        ]
     })
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -565,6 +599,30 @@ describe('Accounts API', () => {
         expect(body.data.startingBalance).toBe(1250.75)
         expect(body.data.currentBalance).toBe(1250.75)
         expect(body.data.currentBalance).toBe(body.data.startingBalance)
+    })
+
+    it('lists multiple accounts with one grouped balance query', async () => {
+        await Promise.all(
+            ['Checking', 'Savings'].map((name) =>
+                app.request('/api/v1/accounts', {
+                    method: 'POST',
+                    headers: {
+                        ...authHeader(TOKEN_USER_1),
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ name, color: '#3b82f6', icon: 'wallet' }),
+                }),
+            ),
+        )
+        vi.mocked(prisma.transaction.groupBy).mockClear()
+
+        const res = await app.request('/api/v1/accounts', {
+            headers: authHeader(TOKEN_USER_1),
+        })
+
+        expect(res.status).toBe(200)
+        expect(((await res.json()) as SuccessBody<SerializedAccount[]>).data).toHaveLength(2)
+        expect(prisma.transaction.groupBy).toHaveBeenCalledTimes(1)
     })
 
     it('calculates currentBalance from starting balance and transaction movements', async () => {

@@ -1,6 +1,7 @@
 import type { AuthUser } from '../../types/app.js'
 import { getOrCreateUserProfile } from '../auth/auth.service.js'
 import { fromCents, serializeDecimal, toCents } from '../../shared/money/decimal.js'
+import { getUtcMonthRange } from '../../shared/date/month.js'
 import { AppError } from '../../shared/errors/AppError.js'
 import { findTransactionsForMonth, findRecentTransactionsForMonth } from './summary.repository.js'
 import type { Transaction } from '@prisma/client'
@@ -67,22 +68,15 @@ export const getMonthlySummary = async (
     const profile = await getOrCreateUserProfile(authUser)
 
     // Determine month range
-    let y: number
-    let m: number
+    let month: string
     if (query.month) {
-        const [yStr, mStr] = query.month.split('-')
-        y = Number(yStr)
-        m = Number(mStr)
+        month = query.month
     } else {
         const now = new Date()
-        y = now.getUTCFullYear()
-        m = now.getUTCMonth() + 1
+        month = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`
     }
 
-    const start = new Date(Date.UTC(y, m - 1, 1))
-    const next = new Date(Date.UTC(y, m, 1))
-    const startIso = start.toISOString()
-    const nextIso = next.toISOString()
+    const { start, next, startIso, nextIso } = getUtcMonthRange(month)
 
     try {
         const allTx = await findTransactionsForMonth(profile.id, startIso, nextIso)
@@ -325,7 +319,7 @@ export const getMonthlySummary = async (
         }))
 
         return {
-            month: `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}`,
+            month: `${String(start.getUTCFullYear()).padStart(4, '0')}-${String(start.getUTCMonth() + 1).padStart(2, '0')}`,
             period: {
                 startDate: start.toISOString().slice(0, 10),
                 endDate: new Date(next.getTime() - 1).toISOString().slice(0, 10),

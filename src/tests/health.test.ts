@@ -5,6 +5,7 @@ describe('GET /health', () => {
     it('returns 200 with status ok', async () => {
         const res = await app.request('/health')
         expect(res.status).toBe(200)
+        expect(res.headers.get('X-Request-ID')).toMatch(/^[0-9a-f-]{36}$/)
         const body = await res.json()
         expect(body).toEqual({ data: { status: 'ok' } })
     })

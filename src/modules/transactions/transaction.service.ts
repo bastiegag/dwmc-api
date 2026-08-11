@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client'
 import { AppError } from '../../shared/errors/AppError.js'
 import { getOrCreateUserProfile } from '../auth/auth.service.js'
 import { serializeDecimal } from '../../shared/money/decimal.js'
+import { getUtcMonthRange } from '../../shared/date/month.js'
 import {
     findManyByUserProfileId,
     countManyByUserProfileId,
@@ -179,11 +180,7 @@ export const listTransactions = async (authUser: AuthUser, query: GetTransaction
     let startDate: string | undefined = query.startDate
     let endDate: string | undefined = query.endDate
     if (query.month) {
-        const [yStr, mStr] = query.month.split('-')
-        const y = Number(yStr)
-        const m = Number(mStr)
-        const start = new Date(Date.UTC(y, m - 1, 1))
-        const next = new Date(Date.UTC(y, m, 1))
+        const { start, next } = getUtcMonthRange(query.month)
         startDate = start.toISOString()
         // use ISO string for endDate (exclusive upper bound handled by query)
         endDate = new Date(next.getTime() - 1).toISOString()
