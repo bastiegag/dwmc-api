@@ -80,6 +80,138 @@ describe('Monthly Summary API', () => {
         expect(res.status).toBe(422)
     })
 
+    it('rejects a calendar-invalid month', async () => {
+        const res = await app.request('/api/v1/summary/monthly?month=2026-99', {
+            headers: authHeader(TOKEN_USER_1),
+        })
+        expect(res.status).toBe(422)
+    })
+
+    it('includes the first and last instants of the selected month only', async () => {
+        transactions.push(
+            {
+                id: 'before',
+                userProfileId: 'profile-auth-user-1',
+                type: 'EXPENSE',
+                amount: 10,
+                date: '2026-05-31T23:59:59.999Z',
+                accountId: 'a1',
+                isArchived: false,
+            },
+            {
+                id: 'first',
+                userProfileId: 'profile-auth-user-1',
+                type: 'EXPENSE',
+                amount: 20,
+                date: '2026-06-01T00:00:00.000Z',
+                accountId: 'a1',
+                isArchived: false,
+            },
+            {
+                id: 'last',
+                userProfileId: 'profile-auth-user-1',
+                type: 'EXPENSE',
+                amount: 30,
+                date: '2026-06-30T23:59:59.999Z',
+                accountId: 'a1',
+                isArchived: false,
+            },
+            {
+                id: 'after',
+                userProfileId: 'profile-auth-user-1',
+                type: 'EXPENSE',
+                amount: 40,
+                date: '2026-07-01T00:00:00.000Z',
+                accountId: 'a1',
+                isArchived: false,
+            },
+        )
+
+        const res = await app.request('/api/v1/summary/monthly?month=2026-06', {
+            headers: authHeader(TOKEN_USER_1),
+        })
+        const body = (await res.json()) as SuccessBody<any>
+
+        expect(body.data.period).toEqual({ startDate: '2026-06-01', endDate: '2026-06-30' })
+        expect(body.data.totals.transactionCount).toBe(2)
+        expect(body.data.totals.expenseTotal).toBe(50)
+    })
+
+    it('rolls December into January when calculating the next month boundary', async () => {
+        transactions.push(
+            {
+                id: 'december-last',
+                userProfileId: 'profile-auth-user-1',
+                type: 'EXPENSE',
+                amount: 25,
+                date: '2026-12-31T23:59:59.999Z',
+                accountId: 'a1',
+                isArchived: false,
+            },
+            {
+                id: 'january-first',
+                userProfileId: 'profile-auth-user-1',
+                type: 'EXPENSE',
+                amount: 50,
+                date: '2027-01-01T00:00:00.000Z',
+                accountId: 'a1',
+                isArchived: false,
+            },
+        )
+
+        const res = await app.request('/api/v1/summary/monthly?month=2026-12', {
+            headers: authHeader(TOKEN_USER_1),
+        })
+        const body = (await res.json()) as SuccessBody<any>
+
+        expect(body.data.period).toEqual({ startDate: '2026-12-01', endDate: '2026-12-31' })
+        expect(body.data.totals.expenseTotal).toBe(25)
+    })
+
+    it('includes February 29 in leap years', async () => {
+        transactions.push({
+            id: 'leap-day',
+            userProfileId: 'profile-auth-user-1',
+            type: 'EXPENSE',
+            amount: 29,
+            date: '2028-02-29T23:59:59.999Z',
+            accountId: 'a1',
+            isArchived: false,
+        })
+
+        const res = await app.request('/api/v1/summary/monthly?month=2028-02', {
+            headers: authHeader(TOKEN_USER_1),
+        })
+        const body = (await res.json()) as SuccessBody<any>
+
+        expect(body.data.period).toEqual({ startDate: '2028-02-01', endDate: '2028-02-29' })
+        expect(body.data.totals.expenseTotal).toBe(29)
+    })
+
+    it('uses UTC month boundaries for offset timestamps', async () => {
+        transactions.push({
+            id: 'offset-boundary',
+            userProfileId: 'profile-auth-user-1',
+            type: 'EXPENSE',
+            amount: 15,
+            date: '2026-05-31T23:30:00-05:00',
+            accountId: 'a1',
+            isArchived: false,
+        })
+
+        const mayResponse = await app.request('/api/v1/summary/monthly?month=2026-05', {
+            headers: authHeader(TOKEN_USER_1),
+        })
+        const juneResponse = await app.request('/api/v1/summary/monthly?month=2026-06', {
+            headers: authHeader(TOKEN_USER_1),
+        })
+        const mayBody = (await mayResponse.json()) as SuccessBody<any>
+        const juneBody = (await juneResponse.json()) as SuccessBody<any>
+
+        expect(mayBody.data.totals.transactionCount).toBe(0)
+        expect(juneBody.data.totals.expenseTotal).toBe(15)
+    })
+
     it('Defaults to current month when month not provided', async () => {
         // create a transaction for current month
         const now = new Date()

@@ -12,9 +12,9 @@ export const findTransactionsForMonth = async (
             date: { gte: new Date(startIso), lt: new Date(nextMonthStartIso) },
         },
         include: {
-            account: { select: { id: true, name: true, color: true, icon: true } },
-            fromAccount: { select: { id: true, name: true, color: true, icon: true } },
-            toAccount: { select: { id: true, name: true, color: true, icon: true } },
+            account: { select: { id: true, name: true, color: true, icon: true, type: true } },
+            fromAccount: { select: { id: true, name: true, color: true, icon: true, type: true } },
+            toAccount: { select: { id: true, name: true, color: true, icon: true, type: true } },
             category: {
                 select: {
                     id: true,
@@ -42,9 +42,9 @@ export const findRecentTransactionsForMonth = async (
             date: { gte: new Date(startIso), lt: new Date(nextMonthStartIso) },
         },
         include: {
-            account: { select: { id: true, name: true, color: true, icon: true } },
-            fromAccount: { select: { id: true, name: true, color: true, icon: true } },
-            toAccount: { select: { id: true, name: true, color: true, icon: true } },
+            account: { select: { id: true, name: true, color: true, icon: true, type: true } },
+            fromAccount: { select: { id: true, name: true, color: true, icon: true, type: true } },
+            toAccount: { select: { id: true, name: true, color: true, icon: true, type: true } },
             category: {
                 select: {
                     id: true,

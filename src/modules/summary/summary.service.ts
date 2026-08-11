@@ -7,8 +7,20 @@ import type { Transaction } from '@prisma/client'
 
 type Tx = Transaction & {
     account?: { id: string; name: string; color: string; icon: string; type?: string } | null
-    fromAccount?: { id: string; name?: string; color?: string; icon?: string } | null
-    toAccount?: { id: string; name?: string; color?: string; icon?: string } | null
+    fromAccount?: {
+        id: string
+        name?: string
+        color?: string
+        icon?: string
+        type?: string
+    } | null
+    toAccount?: {
+        id: string
+        name?: string
+        color?: string
+        icon?: string
+        type?: string
+    } | null
     category?: {
         id: string
         name: string
@@ -208,7 +220,7 @@ export const getMonthlySummary = async (
                     const acc: AccountAgg = existing ?? {
                         accountId: key,
                         name: t.fromAccount?.name ?? null,
-                        type: null,
+                        type: t.fromAccount?.type ?? null,
                         color: t.fromAccount?.color ?? null,
                         icon: t.fromAccount?.icon ?? null,
                         incomeTotalCents: 0n,
@@ -231,7 +243,7 @@ export const getMonthlySummary = async (
                     const acc: AccountAgg = existing ?? {
                         accountId: key,
                         name: t.toAccount?.name ?? null,
-                        type: null,
+                        type: t.toAccount?.type ?? null,
                         color: t.toAccount?.color ?? null,
                         icon: t.toAccount?.icon ?? null,
                         incomeTotalCents: 0n,
