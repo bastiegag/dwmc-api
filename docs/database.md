@@ -6,7 +6,7 @@ The application uses PostgreSQL through Prisma. `UserProfile` is the local ident
 
 ## Models
 
-- **UserProfile**: local profile data, currency, locale, and ownership relations.
+- **UserProfile**: local profile data, preferred currency, locale, and ownership relations. `authUserId` is unique and is the only link to the Supabase Auth identity.
 - **Section**: user-owned grouping with a name, color, and archive flag.
 - **Category**: user-owned child of a section with a name, icon, and archive flag.
 - **Account**: user-owned account with type, Decimal starting balance/goal, color, icon, and archive flag.

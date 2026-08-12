@@ -13,6 +13,7 @@ import { accountRoutes } from './modules/accounts/account.routes.js'
 import { transactionRoutes } from './modules/transactions/transaction.routes.js'
 import { summaryRoutes } from './modules/summary/summary.routes.js'
 import { budgetRoutes } from './modules/budgets/budget.routes.js'
+import { profileRoutes } from './modules/profile/profile.routes.js'
 
 const app = new Hono<AppBindings>()
 
@@ -54,5 +55,6 @@ app.route('/api/v1/accounts', accountRoutes)
 app.route('/api/v1/transactions', transactionRoutes)
 app.route('/api/v1/summary', summaryRoutes)
 app.route('/api/v1/budgets', budgetRoutes)
+app.route('/api/v1/profile', profileRoutes)
 
 export { app }

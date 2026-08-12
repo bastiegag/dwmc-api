@@ -50,6 +50,7 @@ Errors:
 | GET              | `/api/v1/summary/monthly`  | Authenticated | Monthly summary and recent transactions.      |
 | GET/POST         | `/api/v1/budgets`          | Authenticated | Monthly budget list or create.                |
 | GET/PATCH/DELETE | `/api/v1/budgets/:id`      | Authenticated | Read, update, or archive a budget.            |
+| GET/PATCH        | `/api/v1/profile`          | Authenticated | Current user's profile; GET initializes it.   |
 
 Request schemas are defined beside each route in `src/modules/*/*.schema.ts`. The module docs describe the business rules and filters for each resource.
 

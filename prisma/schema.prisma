@@ -17,7 +17,8 @@ model UserProfile {
   email      String?
   firstName  String?
   lastName   String?
-  currency   String   @default("CAD")
+  displayName String?
+  preferredCurrency String   @default("CAD")
   locale     String   @default("fr-CA")
   sections   Section[]
   categories Category[]
