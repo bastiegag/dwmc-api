@@ -81,21 +81,22 @@ npm run build
 
 ## Scripts
 
-| Command                | Purpose                                            |
-| ---------------------- | -------------------------------------------------- |
-| `npm run dev`          | Start the watch-mode server.                       |
-| `npm run build`        | Compile TypeScript to `dist`.                      |
-| `npm start`            | Run the compiled server.                           |
-| `npm run typecheck`    | Type-check without emitting.                       |
-| `npm run lint`         | Run ESLint with zero warnings.                     |
-| `npm run format:check` | Check Prettier formatting.                         |
-| `npm run test`         | Run Vitest once.                                   |
-| `npm run validate`     | Run formatting, lint, typecheck, tests, and build. |
-| `npm run db:generate`  | Generate the Prisma client.                        |
-| `npm run db:migrate`   | Run Prisma development migrations.                 |
-| `npm run db:studio`    | Open Prisma Studio.                                |
-| `npm run db:reset`     | Reset the database and rerun migrations.           |
-| `npm run db:seed`      | Run the development seed script.                   |
+| Command                     | Purpose                                            |
+| --------------------------- | -------------------------------------------------- |
+| `npm run dev`               | Start the watch-mode server.                       |
+| `npm run build`             | Compile TypeScript to `dist`.                      |
+| `npm start`                 | Run the compiled server.                           |
+| `npm run typecheck`         | Type-check without emitting.                       |
+| `npm run lint`              | Run ESLint with zero warnings.                     |
+| `npm run format:check`      | Check Prettier formatting.                         |
+| `npm run test`              | Run Vitest once.                                   |
+| `npm run validate`          | Run formatting, lint, typecheck, tests, and build. |
+| `npm run db:generate`       | Generate the Prisma client.                        |
+| `npm run db:migrate`        | Run Prisma development migrations.                 |
+| `npm run db:migrate:deploy` | Apply committed migrations in production.          |
+| `npm run db:studio`         | Open Prisma Studio.                                |
+| `npm run db:reset`          | Reset the database and rerun migrations.           |
+| `npm run db:seed`           | Run the development seed script.                   |
 
 ## Documentation
 

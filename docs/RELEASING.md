@@ -26,14 +26,22 @@ Use `npm run version` to consume changesets and update the package/changelog sta
 
 ## Database Migrations
 
-Schema changes require an approved Prisma migration and regenerated client:
+Schema changes require an approved Prisma migration and regenerated client. Create
+development migrations locally, but apply the committed migration history to a
+production database with `prisma migrate deploy`:
 
 ```bash
 npm run db:migrate
 npm run db:generate
+npm run db:migrate:deploy
 ```
 
-The release workflows do not automatically apply production database migrations. Migration ordering, backups, deployment timing, and rollback strategy must be handled by the deployment process that owns the target database. Do not invent a hosting platform or claim migration automation that is not configured here.
+The release workflows do not automatically apply production database migrations. Run
+`npm run db:migrate:deploy` only against the intended production `DATABASE_URL`, after
+confirming a current backup and reviewing the SQL. Migration ordering, deployment
+timing, and rollback strategy must be handled by the deployment process that owns the
+target database. Do not use `db:reset`, `prisma migrate reset`, or `prisma migrate dev`
+against production.
 
 ## Contract Compatibility
 
