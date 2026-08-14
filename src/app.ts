@@ -19,7 +19,14 @@ const app = new Hono<AppBindings>()
 
 // ── Middleware ──────────────────────────────────────────────────────────────
 
-app.use('*', cors({ origin: env.APP_ORIGIN }))
+app.use(
+    '*',
+    cors({
+        origin: env.APP_ORIGIN,
+        allowHeaders: ['Authorization', 'Content-Type'],
+        allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    }),
+)
 app.use('*', requestLogger)
 
 // ── Error handler ───────────────────────────────────────────────────────────

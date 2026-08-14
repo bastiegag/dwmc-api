@@ -40,7 +40,30 @@ npm run dev
 
 The development server listens on port `3000` by default. The frontend repository's Vite development server proxies `/api/v1` to this server.
 
-See the package scripts and [releasing](docs/releasing.md) for migration and validation guidance.
+See the package scripts and [releasing](docs/RELEASING.md) for migration and validation guidance.
+
+## Render Deployment
+
+The production API is intended to run as a stateless Render Free Web Service.
+Render hosts the Node.js process, Supabase hosts PostgreSQL, and Supabase Auth
+continues to issue and validate browser access tokens. Configure `APP_ORIGIN`
+with the exact Vercel production origin; do not use `*` in production.
+
+Use these Render commands:
+
+```bash
+# Build Command
+npm ci && npm run db:generate && npm run build
+
+# Start Command
+npm start
+```
+
+Use `/health` as the Render Health Check Path. Run `npm run db:migrate:deploy`
+as a controlled release step against the intended Supabase database before
+deploying code that requires the migration. Migrations are not run by the
+Render start command. The complete release order and smoke-test plan are in
+[releasing](docs/releasing.md).
 
 ## Environment Variables
 

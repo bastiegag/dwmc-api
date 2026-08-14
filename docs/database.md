@@ -30,3 +30,19 @@ Account `currentBalance`, budget `spent`, `remaining`, `progress`, and summary t
 ## Migrations
 
 Migration history lives under `prisma/migrations`. Use `npm run db:migrate` for development migrations and `npm run db:generate` after schema changes. Production migration execution is not automated by the release workflow; deployment operators must apply an approved migration using the environment's database process.
+
+## Supabase Production Connection
+
+The Prisma datasource remains `provider = "postgresql"` and reads
+`DATABASE_URL` only from the environment. The repository's local example uses
+the direct Docker PostgreSQL service; no production Supabase connection string
+or connection mode is committed. Render must receive the selected Supabase
+PostgreSQL URL for the target project. A Supabase direct connection or
+Supavisor session-pooler connection is compatible with this Prisma setup; use
+the mode tested for the target Supabase project and do not use a transaction
+pooler URL for Prisma migrations. Keep any migration/direct URL handling in the
+database release process rather than committing credentials here.
+
+Supabase owns PostgreSQL backups and recovery. Render does not provide a backup
+of application data, and this API does not write persistent state to Render's
+filesystem.

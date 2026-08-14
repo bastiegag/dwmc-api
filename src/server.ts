@@ -6,8 +6,9 @@ serve(
     {
         fetch: app.fetch,
         port: env.PORT,
+        hostname: '0.0.0.0',
     },
     (info) => {
-        console.log(`🚀 Server running on http://localhost:${info.port} (${env.NODE_ENV})`)
+        console.log(`API listening on port ${info.port} (${env.NODE_ENV})`)
     },
 )
