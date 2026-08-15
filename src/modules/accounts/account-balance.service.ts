@@ -1,53 +1,49 @@
-import { prisma } from '../../db/prisma.js'
-import { serializeDecimal } from '../../shared/money/decimal.js'
+import { fromCents, toCents } from '../../shared/money/decimal.js'
+import { findBalanceTotalsByAccountIds } from './account-balance.repository.js'
 
 /**
- * Calculate current account balance by aggregating non-archived transactions.
+ * Calculate current account balances from one grouped transaction query.
  */
+export const calculateAccountBalances = async (
+    userProfileId: string,
+    accounts: Array<{ id: string; startingBalance: number }>,
+) => {
+    const totals = await findBalanceTotalsByAccountIds(
+        userProfileId,
+        accounts.map((account) => account.id),
+    )
+    const balances = new Map<string, bigint>()
+
+    const add = (accountId: string, amount: bigint) => {
+        balances.set(accountId, (balances.get(accountId) ?? 0n) + amount)
+    }
+
+    for (const total of totals) {
+        const amount = toCents(total._sum.amount ?? 0)
+        if (total.type === 'INCOME' && total.accountId) add(total.accountId, amount)
+        if (total.type === 'EXPENSE' && total.accountId) add(total.accountId, -amount)
+        if (total.type === 'ADJUSTMENT' && total.accountId) add(total.accountId, amount)
+        if (total.type === 'TRANSFER' && total.toAccountId) add(total.toAccountId, amount)
+        if (total.type === 'TRANSFER' && total.fromAccountId) add(total.fromAccountId, -amount)
+    }
+
+    return new Map(
+        accounts.map((account) => [
+            account.id,
+            fromCents(toCents(account.startingBalance) + (balances.get(account.id) ?? 0n)),
+        ]),
+    )
+}
+
 export const calculateAccountBalance = async (
     userProfileId: string,
     accountId: string,
     startingBalance: number,
 ) => {
-    const income = await prisma.transaction.aggregate({
-        _sum: { amount: true },
-        where: { userProfileId, type: 'INCOME', accountId, isArchived: false },
-    })
-
-    const expense = await prisma.transaction.aggregate({
-        _sum: { amount: true },
-        where: { userProfileId, type: 'EXPENSE', accountId, isArchived: false },
-    })
-
-    const adjustment = await prisma.transaction.aggregate({
-        _sum: { amount: true },
-        where: { userProfileId, type: 'ADJUSTMENT', accountId, isArchived: false },
-    })
-
-    const incoming = await prisma.transaction.aggregate({
-        _sum: { amount: true },
-        where: { userProfileId, type: 'TRANSFER', toAccountId: accountId, isArchived: false },
-    })
-
-    const outgoing = await prisma.transaction.aggregate({
-        _sum: { amount: true },
-        where: { userProfileId, type: 'TRANSFER', fromAccountId: accountId, isArchived: false },
-    })
-
-    const sum = (val: unknown) => {
-        const v = val as { _sum?: { amount?: unknown } } | undefined
-        return v && v._sum && v._sum.amount ? serializeDecimal(v._sum.amount) : 0
-    }
-
-    const total =
-        startingBalance +
-        sum(income) -
-        sum(expense) +
-        sum(adjustment) +
-        sum(incoming) -
-        sum(outgoing)
-
-    return total
+    const balances = await calculateAccountBalances(userProfileId, [
+        { id: accountId, startingBalance },
+    ])
+    return balances.get(accountId) ?? startingBalance
 }
 
-export default { calculateAccountBalance }
+export default { calculateAccountBalance, calculateAccountBalances }

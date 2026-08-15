@@ -1,14 +1,25 @@
 import type { MiddlewareHandler } from 'hono'
+import { randomUUID } from 'node:crypto'
 
-/** Logs method, URL, status code, and duration for every request. */
+/** Adds a request ID and logs a structured request summary. */
 export const requestLogger: MiddlewareHandler = async (c, next) => {
     const start = Date.now()
     const { method } = c.req.raw
-    const url = c.req.url
+    const requestId = randomUUID()
+    c.set('requestId', requestId)
+    c.header('X-Request-ID', requestId)
 
-    await next()
-
-    const duration = Date.now() - start
-    const status = c.res.status
-    console.log(`${method} ${url} ${status} ${duration}ms`)
+    try {
+        await next()
+    } finally {
+        console.log(
+            JSON.stringify({
+                requestId,
+                method,
+                path: new URL(c.req.url).pathname,
+                status: c.res.status || 500,
+                durationMs: Date.now() - start,
+            }),
+        )
+    }
 }

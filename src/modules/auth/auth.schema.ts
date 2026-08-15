@@ -13,6 +13,10 @@ export const userProfileResponseSchema = z.object({
     email: z.string().nullable().optional(),
     firstName: z.string().nullable().optional(),
     lastName: z.string().nullable().optional(),
-    currency: z.string(),
+    displayName: z.string().nullable().optional(),
+    preferredCurrency: z.string(),
+    currency: z.string().optional(),
     locale: z.string(),
+    createdAt: z.string().datetime().optional(),
+    updatedAt: z.string().datetime().optional(),
 })

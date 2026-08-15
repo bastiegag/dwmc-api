@@ -1,8 +1,9 @@
 import type { AuthUser } from '../../types/app.js'
-import type { Prisma } from '@prisma/client'
+import { Prisma, type Prisma as PrismaTypes } from '@prisma/client'
 import { AppError } from '../../shared/errors/AppError.js'
 import { getOrCreateUserProfile } from '../auth/auth.service.js'
-import { serializeDecimal } from '../../shared/money/decimal.js'
+import { fromCents, toCents } from '../../shared/money/decimal.js'
+import { getUtcMonthRange } from '../../shared/date/month.js'
 import {
     findManyByUserProfileId,
     findByIdForUser,
@@ -15,21 +16,12 @@ import {
 import { findByIdForUser as findCategoryByIdForUser } from '../categories/category.repository.js'
 import type { CreateBudgetInput, UpdateBudgetInput, GetBudgetsQueryInput } from './budget.schema.js'
 
-const monthToRange = (month: string) => {
-    const [yStr, mStr] = month.split('-')
-    const y = Number(yStr)
-    const m = Number(mStr)
-    const start = new Date(Date.UTC(y, m - 1, 1))
-    const next = new Date(Date.UTC(y, m, 1))
-    return { startIso: start.toISOString(), nextIso: next.toISOString() }
+const computeProgress = (amountCents: bigint, spentCents: bigint) => {
+    if (amountCents === 0n) return spentCents === 0n ? 0 : 100
+    return (Number(spentCents) / Number(amountCents)) * 100
 }
 
-const computeProgress = (amountNum: number, spentNum: number) => {
-    if (amountNum === 0) return spentNum === 0 ? 0 : 100
-    return (spentNum / amountNum) * 100
-}
-
-type BudgetWithCategory = Prisma.BudgetGetPayload<{
+type BudgetWithCategory = PrismaTypes.BudgetGetPayload<{
     include: {
         category: {
             select: {
@@ -45,29 +37,32 @@ type BudgetWithCategory = Prisma.BudgetGetPayload<{
 
 type ExpenseAgg = {
     categoryId: string | null
-    _sum: { amount: Prisma.Decimal | number | null }
+    _sum: { amount: PrismaTypes.Decimal | number | null }
     _count: { id: number }
 }
 
-const serializeBudgetRecord = (budget: BudgetWithCategory, spent = 0, count = 0) => {
-    const amount = serializeDecimal(budget.amount as unknown as Prisma.Decimal | number | string)
-    const spentNum = Number(spent)
-    const remaining = amount - spentNum
-    const progress = Number(Number(computeProgress(amount, spentNum)).toFixed(6))
+const serializeBudgetRecord = (budget: BudgetWithCategory, spentCents = 0n, count = 0) => {
+    const amountCents = toCents(budget.amount as unknown as PrismaTypes.Decimal | number | string)
+    const remainingCents = amountCents - spentCents
+    const progress = Number(Number(computeProgress(amountCents, spentCents)).toFixed(6))
     return {
         id: budget.id,
         month: budget.month,
-        amount,
-        spent: Number(spentNum),
-        remaining: Number(remaining),
+        amount: fromCents(amountCents),
+        spent: fromCents(spentCents),
+        remaining: fromCents(remainingCents),
         progress,
-        isOverBudget: spentNum > amount,
+        isOverBudget: spentCents > amountCents,
         transactionCount: count,
         isArchived: budget.isArchived as boolean,
         createdAt: toIso(budget.createdAt),
         updatedAt: toIso(budget.updatedAt),
         category: budget.category ?? null,
     }
+}
+
+const isUniqueConstraintError = (error: unknown) => {
+    return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002'
 }
 
 const toIso = (d: unknown) => {
@@ -97,22 +92,22 @@ export const listBudgets = async (authUser: AuthUser, query: GetBudgetsQueryInpu
         includeArchived: Boolean(query.includeArchived),
     })
 
-    const { startIso, nextIso } = monthToRange(month)
+    const { startIso, nextIso } = getUtcMonthRange(month)
     const aggs = (await findExpenseTotalsByCategoryForMonth(
         profile.id,
         startIso,
         nextIso,
     )) as ExpenseAgg[]
-    const map = new Map<string, { sum: number; count: number }>()
+    const map = new Map<string, { sumCents: bigint; count: number }>()
     for (const a of aggs) {
         const catId = a.categoryId
         if (!catId) continue
-        map.set(catId, { sum: Number(a._sum.amount ?? 0), count: a._count.id })
+        map.set(catId, { sumCents: toCents(a._sum.amount ?? 0), count: a._count.id })
     }
 
     return budgets.map((b) => {
-        const found = map.get(b.categoryId) ?? { sum: 0, count: 0 }
-        return serializeBudgetRecord(b, found.sum, found.count)
+        const found = map.get(b.categoryId) ?? { sumCents: 0n, count: 0 }
+        return serializeBudgetRecord(b, found.sumCents, found.count)
     })
 }
 
@@ -121,28 +116,47 @@ export const createBudget = async (authUser: AuthUser, input: CreateBudgetInput)
 
     const cat = await findCategoryByIdForUser(input.categoryId, profile.id)
     if (!cat) throw new AppError('NOT_FOUND', 'Category not found', 404)
+    if (cat.isArchived) {
+        throw new AppError(
+            'VALIDATION_ERROR',
+            'Archived categories cannot receive new budgets.',
+            422,
+        )
+    }
 
     const dup = await findDuplicateByCategoryAndMonth(profile.id, input.categoryId, input.month)
     if (dup)
         throw new AppError('CONFLICT', 'A budget already exists for this category and month.', 409)
 
-    const created = await createForUser(profile.id, {
-        categoryId: input.categoryId,
-        month: input.month,
-        amount: input.amount,
-    } as Prisma.BudgetUncheckedCreateInput)
+    let created: BudgetWithCategory
+    try {
+        created = await createForUser(profile.id, {
+            categoryId: input.categoryId,
+            month: input.month,
+            amount: input.amount,
+        } as PrismaTypes.BudgetUncheckedCreateInput)
+    } catch (error) {
+        if (isUniqueConstraintError(error)) {
+            throw new AppError(
+                'CONFLICT',
+                'A budget already exists for this category and month.',
+                409,
+            )
+        }
+        throw error
+    }
 
-    const { startIso, nextIso } = monthToRange(input.month)
+    const { startIso, nextIso } = getUtcMonthRange(input.month)
     const aggs = (await findExpenseTotalsByCategoryForMonth(
         profile.id,
         startIso,
         nextIso,
     )) as ExpenseAgg[]
     const found = aggs.find((a) => a.categoryId === created.categoryId)
-    const spent = found ? Number(found._sum.amount ?? 0) : 0
+    const spentCents = found ? toCents(found._sum.amount ?? 0) : 0n
     const count = found ? found._count.id : 0
 
-    return serializeBudgetRecord(created, spent, count)
+    return serializeBudgetRecord(created, spentCents, count)
 }
 
 export const getBudgetById = async (authUser: AuthUser, id: string) => {
@@ -151,17 +165,17 @@ export const getBudgetById = async (authUser: AuthUser, id: string) => {
     const b = await findByIdForUser(id, profile.id)
     if (!b) throw new AppError('NOT_FOUND', 'Budget not found', 404)
 
-    const { startIso, nextIso } = monthToRange(b.month)
+    const { startIso, nextIso } = getUtcMonthRange(b.month)
     const aggs = (await findExpenseTotalsByCategoryForMonth(
         profile.id,
         startIso,
         nextIso,
     )) as ExpenseAgg[]
     const found = aggs.find((a) => a.categoryId === b.categoryId)
-    const spent = found ? Number(found._sum.amount ?? 0) : 0
+    const spentCents = found ? toCents(found._sum.amount ?? 0) : 0n
     const count = found ? found._count.id : 0
 
-    return serializeBudgetRecord(b, spent, count)
+    return serializeBudgetRecord(b, spentCents, count)
 }
 
 export const updateBudget = async (authUser: AuthUser, id: string, input: UpdateBudgetInput) => {
@@ -176,6 +190,13 @@ export const updateBudget = async (authUser: AuthUser, id: string, input: Update
     if (input.categoryId) {
         const cat = await findCategoryByIdForUser(input.categoryId, profile.id)
         if (!cat) throw new AppError('NOT_FOUND', 'Category not found', 404)
+        if (cat.isArchived && input.categoryId !== existing.categoryId) {
+            throw new AppError(
+                'VALIDATION_ERROR',
+                'Archived categories cannot receive new budgets.',
+                422,
+            )
+        }
     }
 
     if (newCategoryId !== existing.categoryId || newMonth !== existing.month) {
@@ -188,20 +209,32 @@ export const updateBudget = async (authUser: AuthUser, id: string, input: Update
             )
     }
 
-    const updated = await updateForUser(id, profile.id, input as Prisma.BudgetUpdateInput)
+    let updated: BudgetWithCategory | null
+    try {
+        updated = await updateForUser(id, profile.id, input as PrismaTypes.BudgetUpdateInput)
+    } catch (error) {
+        if (isUniqueConstraintError(error)) {
+            throw new AppError(
+                'CONFLICT',
+                'A budget already exists for this category and month.',
+                409,
+            )
+        }
+        throw error
+    }
     if (!updated) throw new AppError('NOT_FOUND', 'Budget not found', 404)
 
-    const { startIso, nextIso } = monthToRange(updated.month)
+    const { startIso, nextIso } = getUtcMonthRange(updated.month)
     const aggs = (await findExpenseTotalsByCategoryForMonth(
         profile.id,
         startIso,
         nextIso,
     )) as ExpenseAgg[]
     const found = aggs.find((a) => a.categoryId === updated.categoryId)
-    const spent = found ? Number(found._sum.amount ?? 0) : 0
+    const spentCents = found ? toCents(found._sum.amount ?? 0) : 0n
     const count = found ? found._count.id : 0
 
-    return serializeBudgetRecord(updated, spent, count)
+    return serializeBudgetRecord(updated, spentCents, count)
 }
 
 export const archiveBudget = async (authUser: AuthUser, id: string) => {
@@ -210,17 +243,17 @@ export const archiveBudget = async (authUser: AuthUser, id: string) => {
     const archived = await archiveForUser(id, profile.id)
     if (!archived) throw new AppError('NOT_FOUND', 'Budget not found', 404)
 
-    const { startIso, nextIso } = monthToRange(archived.month)
+    const { startIso, nextIso } = getUtcMonthRange(archived.month)
     const aggs = (await findExpenseTotalsByCategoryForMonth(
         profile.id,
         startIso,
         nextIso,
     )) as ExpenseAgg[]
     const found = aggs.find((a) => a.categoryId === archived.categoryId)
-    const spent = found ? Number(found._sum.amount ?? 0) : 0
+    const spentCents = found ? toCents(found._sum.amount ?? 0) : 0n
     const count = found ? found._count.id : 0
 
-    return serializeBudgetRecord(archived, spent, count)
+    return serializeBudgetRecord(archived, spentCents, count)
 }
 
 export default {}

@@ -17,7 +17,19 @@ authRoutes.get('/me', authMiddleware, async (c) => {
     const authUser = c.get('authUser')
     const profile = await getOrCreateUserProfile(authUser)
 
-    return c.json(successResponse({ user: authUser, profile }))
+    return c.json(
+        successResponse({
+            user: authUser,
+            // Keep the legacy auth response field while profile clients use preferredCurrency.
+            profile: {
+                ...profile,
+                currency:
+                    'preferredCurrency' in profile
+                        ? profile.preferredCurrency
+                        : (profile as { currency?: string }).currency,
+            },
+        }),
+    )
 })
 
 export { authRoutes }

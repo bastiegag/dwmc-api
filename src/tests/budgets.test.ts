@@ -186,6 +186,15 @@ describe('Budgets API', () => {
         expect(res.status).toBe(422)
     })
 
+    it('Creating a budget rejects calendar-invalid months', async () => {
+        const res = await app.request('http://localhost/api/v1/budgets', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeader(TOKEN_USER_1) },
+            body: JSON.stringify({ categoryId: 'c1', month: '2026-13', amount: 100 }),
+        })
+        expect(res.status).toBe(422)
+    })
+
     it('Creating a budget rejects negative amount', async () => {
         const res = await app.request('http://localhost/api/v1/budgets', {
             method: 'POST',
@@ -202,6 +211,30 @@ describe('Budgets API', () => {
             body: JSON.stringify({ categoryId: 'nonexistent', month: '2026-06', amount: 100 }),
         })
         expect(res.status).toBe(404)
+    })
+
+    it('Creating a budget rejects an archived category', async () => {
+        categories.push({
+            id: 'archived-category',
+            userProfileId: 'profile-auth-user-1',
+            name: 'Archived',
+            icon: 'i',
+            sectionId: 's1',
+            isArchived: true,
+            section: { id: 's1', name: 'One', color: '#111' },
+        })
+
+        const res = await app.request('http://localhost/api/v1/budgets', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeader(TOKEN_USER_1) },
+            body: JSON.stringify({
+                categoryId: 'archived-category',
+                month: '2026-06',
+                amount: 100,
+            }),
+        })
+
+        expect(res.status).toBe(422)
     })
 
     it('Creating a duplicate budget for the same category and month returns 409', async () => {
@@ -669,5 +702,56 @@ describe('Budgets API', () => {
         expect(b.spent).toBe(10)
         expect(b.progress).toBe(100)
         expect(b.isOverBudget).toBe(true)
+    })
+
+    it('calculates fractional expense totals with exact cents', async () => {
+        categories.push({
+            id: 'cat-fractional',
+            userProfileId: 'profile-auth-user-1',
+            name: 'Fractional',
+            icon: 'i',
+            sectionId: 's1',
+            section: { id: 's1', name: 'One', color: '#111' },
+        })
+        budgets.push({
+            id: 'b-fractional',
+            userProfileId: 'profile-auth-user-1',
+            categoryId: 'cat-fractional',
+            month: '2026-06',
+            amount: 1,
+            isArchived: false,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        })
+        transactions.push(
+            {
+                id: 'tf1',
+                userProfileId: 'profile-auth-user-1',
+                categoryId: 'cat-fractional',
+                type: 'EXPENSE',
+                amount: '0.1',
+                date: new Date(Date.UTC(2026, 5, 2)).toISOString(),
+                isArchived: false,
+            },
+            {
+                id: 'tf2',
+                userProfileId: 'profile-auth-user-1',
+                categoryId: 'cat-fractional',
+                type: 'EXPENSE',
+                amount: '0.2',
+                date: new Date(Date.UTC(2026, 5, 3)).toISOString(),
+                isArchived: false,
+            },
+        )
+
+        const res = await app.request('http://localhost/api/v1/budgets?month=2026-06', {
+            headers: authHeader(TOKEN_USER_1),
+        })
+        const body = (await res.json()) as any
+        const budget = body.data.find((item: any) => item.id === 'b-fractional')
+
+        expect(budget.spent).toBe(0.3)
+        expect(budget.remaining).toBe(0.7)
+        expect(budget.progress).toBe(30)
     })
 })

@@ -1,195 +1,55 @@
-# Copilot Instructions — dwmc-api
+# Copilot Instructions for `dwmc-api`
 
-Trust these instructions. Only search the codebase if the information here is incomplete or appears to be in error.
+## Project Overview
 
----
+`dwmc-api` is the Hono/TypeScript backend for Dude, Where's My Cash?. It owns persistence, authorization, validation, financial calculations, and the `/api/v1` contract. The sibling `../dwmc-web` repository consumes this API; cross-repository changes must be coordinated.
 
-## Project Summary
+## Documentation Hierarchy
 
-`dwmc-api` is a REST API backend for a personal budget application. It is built with **Node.js + TypeScript (strict mode)**, the **Hono** web framework, **Prisma** ORM, **PostgreSQL**, **Zod** for validation, and **Supabase Auth** (JWT) for authentication. Tests run with **Vitest**. The repository has a release workflow in `.github/workflows/release.yml`; validation is done locally and the workflow runs the same validation script before versioning.
+Consult documentation in this order before making design decisions:
 
----
+1. [Developer Playbook](../../dwmc-web/docs/dev-playbook.md) for shared development principles and feature workflow.
+2. [Engineering Audit Playbook](../../dwmc-web/docs/engineering-audit-playbook.md) for review scope, severity, and closure criteria.
+3. [Backend Architecture](../docs/architecture.md) and [frontend architecture](../../dwmc-web/docs/architecture.md) for responsibilities and boundaries.
+4. [API design](../docs/api.md), [database](../docs/database.md), [authentication](../docs/domains/auth.md), and the relevant [domain document](../docs/domains/) for contracts and business rules.
+5. ADRs, when present, for decisions that constrain the implementation.
+6. The relevant [README](../README.md) and package scripts for setup, commands, and repository orientation.
 
-## Runtime & Tooling Versions
+Also consult [backend testing](../docs/testing.md), [frontend testing](../../dwmc-web/docs/testing.md), and [releasing](../docs/releasing.md) or [frontend releasing](../../dwmc-web/docs/releasing.md) when the change affects those areas. The roadmap is context, not a specification: do not implement planned work without confirmed scope.
 
-- **Node.js**: 20+
-- **TypeScript**: ^5.7 (target ES2022, module NodeNext)
-- **Package manager**: npm (use `npm`, never `yarn` or `pnpm`)
-- **Prisma**: ^5.22
-- **Hono**: ^4.6
-- **Vitest**: ^4.1
-- **ESLint**: 9 flat config
-- **Prettier**: ^3.4
+## Development Expectations
 
----
+- Inspect the nearest existing module, route, service, repository, schema, and tests before adding a pattern.
+- Follow the documented architecture and module boundaries; prefer consistency over cleverness.
+- Keep routes thin, schemas responsible for input validation, services responsible for business rules and serialization, repositories responsible for Prisma access, and shared code genuinely cross-cutting.
+- Keep frontend and backend changes aligned. Verify request/response shapes, authentication, ownership, dates, money, and downstream effects in both repositories.
+- Avoid unrelated refactors, duplicate business logic, unnecessary abstractions, and breaking API changes.
 
-## Repository Layout
+## Documentation Expectations
 
-```
-.env.example             # Environment variable template
-docker-compose.yml       # PostgreSQL local database
-eslint.config.js         # ESLint 9 flat config (typescript-eslint + prettier)
-prettier.config.js       # Prettier config (no semi, single quotes, trailing commas)
-tsconfig.json            # Strict TypeScript, NodeNext modules, rootDir=src outDir=dist
-vitest.config.ts         # Vitest config — setupFiles: src/tests/setup.ts
-package.json             # All scripts listed below
-prisma/
-  schema.prisma          # Database schema (UserProfile, Section, Category, Account, Transaction, Budget)
-  seed.ts                # Dev seed script
-  migrations/            # Prisma migration history
-src/
-  server.ts              # Node.js HTTP entry point
-  app.ts                 # Hono app: middleware, error handler, route registration
-  config/env.ts          # Zod-validated env vars — ONLY place to read process.env
-  db/prisma.ts           # Prisma client singleton
-  lib/supabase.ts        # Supabase backend client (service role)
-  types/app.ts           # AppBindings, AuthUser (Hono context types)
-  modules/
-    auth/                # auth.routes.ts, auth.middleware.ts, auth.service.ts, auth.schema.ts
-    sections/            # section.routes.ts, section.schema.ts, section.service.ts, section.repository.ts
-    categories/          # category.routes.ts, category.schema.ts, category.service.ts, category.repository.ts
-    accounts/            # account.routes.ts, account.schema.ts, account.service.ts, account.repository.ts, account-balance.service.ts
-    budgets/             # budget.routes.ts, budget.schema.ts, budget.service.ts, budget.repository.ts
-    summary/             # summary.routes.ts, summary.schema.ts, summary.service.ts, summary.repository.ts
-    transactions/        # transaction.routes.ts, transaction.schema.ts, transaction.service.ts, transaction.repository.ts
-  shared/
-    errors/AppError.ts         # Typed AppError class + ErrorCode type
-    errors/error-handler.ts    # Central Hono onError handler
-    http/api-response.ts       # successResponse / errorResponse helpers
-    validation/validate.ts     # Reusable Zod body validator
-    validation/pagination.ts   # Cursor-based pagination schema
-    logger/request-logger.ts   # Request/response logger middleware
-  tests/
-    setup.ts             # Sets env vars so tests run without a real .env
-    health.test.ts
-    readiness.test.ts
-    auth.test.ts
-    sections.test.ts
-    categories.test.ts
-    accounts.test.ts
-    budgets.test.ts
-    monthly-summary.test.ts
-    transactions.test.ts
-    error-handler.test.ts
-docs/
-  architecture.md        # Request lifecycle, layer responsibilities, how to add a module
-  conventions.md         # Naming, module structure, error handling, testing rules
-  api.md                 # Request/response details for all endpoints
-  auth.md                # Supabase JWT flow
-  local-development.md   # Local setup guide
-  accounts.md            # Accounts module detail
-  budgets.md             # Budgets module detail
-  categories.md          # Categories module detail
-  summary.md             # Monthly summary module detail
-  transactions.md        # Transactions module detail
-  RELEASING.md           # Release workflow and versioning
-```
+Update the relevant documentation in the same task whenever code changes affect architecture, API contracts, business rules, database behavior, engineering workflow, developer conventions, testing, release behavior, or roadmap status. Link to the canonical document instead of duplicating its content. Never leave documentation describing behavior that the implementation no longer provides.
 
----
+## Engineering Expectations
 
-## Build & Validation Steps
+Preserve backend ownership and authorization boundaries. Keep financial calculations authoritative in services, persistence isolated in repositories, and public response behavior consistent with the API documentation and tests. Prefer small, comprehensible changes that fit the codebase over speculative generalization.
 
-Always run these in order after making changes:
+## Code Generation Rules
 
-1. Install dependencies first after any `package.json` change: `npm install`
-2. Run the full validation pass: `npm run validate`
+- Read existing code, schemas, tests, and relevant documentation first.
+- Match local naming, module layout, formatting, and error/response conventions.
+- Modify existing code when appropriate instead of rewriting working paths.
+- Minimize breaking changes; use an explicit migration strategy for incompatible contracts.
+- Add meaningful regression coverage at the HTTP boundary where practical.
+- For schema changes, create the required Prisma migration, regenerate the client, and document migration implications.
 
-Optional / helpful scripts:
+## Feature Development
 
-- `npm run test:watch`
-- `npm run test:coverage`
+For a new feature, consult the Developer Playbook, relevant backend and frontend architecture, the API/database/auth/domain documentation, and the testing guidance. Implement backend and frontend contract changes together when needed, then update tests and affected documentation. Verify ownership isolation, validation, archive behavior, month boundaries, money calculations, and response envelopes.
 
-To compile to `dist/`:
+## Engineering Audits
 
-```bash
-npm run build
-```
+Before considering a feature complete, follow the Engineering Audit Playbook. Evaluate implementation against documented standards, inspect integration and cross-feature effects, report evidence-based findings using its severity levels, and conclude with `READY TO CLOSE` or `NOT READY TO CLOSE` as defined there.
 
-To auto-fix lint and format issues:
+## General Rules
 
-```bash
-npm run lint:fix
-npm run format
-```
-
-**Tests do not require a running database or real Supabase credentials.** `src/tests/setup.ts` injects stub env vars, and each test file mocks Prisma and Supabase with `vi.mock()`. Simply run `npm test`.
-
----
-
-## Database (only needed to run the server locally, not for tests)
-
-```bash
-docker compose up -d          # Start PostgreSQL
-npm run db:migrate             # Run pending Prisma migrations
-npm run db:generate            # Regenerate Prisma client after schema changes
-npm run db:seed                # Seed dev data
-```
-
-You can also use these database helper scripts:
-
-```bash
-npm run db:studio   # Open Prisma Studio
-npm run db:reset    # Reset DB (migrate reset)
-```
-
-After modifying `prisma/schema.prisma`, always run `npm run db:generate` (or `npm run db:migrate` for a new migration) before building or type-checking.
-
----
-
-## Architecture & Conventions
-
-**Module structure** — every domain module in `src/modules/<name>/` has exactly four files:
-
-- `<name>.routes.ts` — thin Hono router; validates input, calls service, returns response
-- `<name>.schema.ts` — Zod schemas and inferred types
-- `<name>.service.ts` — business logic; throws `AppError`; never raw Prisma/Supabase errors
-- `<name>.repository.ts` — Prisma queries only; always scoped by `userProfileId`
-
-**To add a new module:**
-
-1. Create `src/modules/<name>/` with the four files above.
-2. Register the router in `src/app.ts`: `app.route('/api/v1/<name>', <name>Routes)`
-3. Protect routes with `authMiddleware`.
-4. Add the Prisma model to `prisma/schema.prisma` referencing `UserProfile.id`.
-5. Run `npm run db:migrate` and `npm run db:generate`.
-
-**Error handling:**
-
-- Always throw `new AppError('NOT_FOUND' | 'UNAUTHORIZED' | 'FORBIDDEN' | 'VALIDATION_ERROR' | 'CONFLICT' | 'INTERNAL_SERVER_ERROR', message, statusCode)`.
-- Never let Prisma or Supabase errors propagate raw to the client.
-- The central handler in `src/shared/errors/error-handler.ts` converts `AppError` to the standard envelope.
-
-**API responses:** always use `successResponse(data)` and `errorResponse(code, message)` from `src/shared/http/api-response.ts`. Never construct raw `{ data: … }` or `{ error: … }` objects.
-
-Use the pagination helper that matches the module:
-
-- `paginatedResponse(items, nextCursor)` for cursor-based lists like sections and categories.
-- `paginatedMetaResponse(items, meta)` for offset-based lists like transactions.
-
-**User data scoping:** every query on user-owned tables **must** include `where: { userProfileId: profile.id }`. Never query without this filter.
-
-**Soft delete:** use `isArchived: true` instead of hard deletes. Archiving a Section also archives its child Categories.
-
-**Environment variables:** never read `process.env` directly in application code. All env access goes through `src/config/env.ts`.
-
-**TypeScript:** strict mode is on. Use `import type { … }` for type-only imports. Avoid `as any` outside test files. `noUncheckedIndexedAccess` is enabled — array/map accesses may be `T | undefined`.
-
-The project `tsconfig.json` also enables `noImplicitOverride` and `noImplicitReturns`.
-
-**Naming:**
-
-- Files: `kebab-case` (e.g. `auth.middleware.ts`)
-- Classes/Types/Interfaces: `PascalCase`
-- Functions/Variables: `camelCase`
-- Zod schemas: `camelCase` + `Schema` suffix (e.g. `createSectionSchema`)
-
-**Prettier config:** no semicolons, single quotes, trailing commas, print width 100, tab width 2.
-
-**Validation helpers:**
-
-- Use `validateBody(c, schema)` to validate JSON request bodies.
-- Use `parseOrThrow(schema, input)` to validate URL params and query strings (throws `VALIDATION_ERROR` `AppError` on failure).
-
-**Testing:** mock Prisma and Supabase with `vi.mock()` per test file. Use `vi.clearAllMocks()` in `beforeEach`. Test files live in `src/tests/`. Test the HTTP layer (status codes, response shapes). Skip any tests requiring a live Supabase token with `it.skip` and add a comment explaining the requirement.
-
-**Release workflow:** `.github/workflows/release.yml` runs `npm run validate` on pushes to `main`, then Changesets versions the backend and creates or updates the release PR. Keep release notes and docs aligned with the API contract under `/api/v1`.
+Copilot must not invent undocumented requirements, duplicate project documentation, introduce architectural patterns without justification, ignore existing conventions, weaken authorization, expose secrets, or leave implementation and documentation inconsistent. When documentation and assumptions conflict, inspect the code and tests, identify the discrepancy, and update the appropriate source and documentation together.

@@ -1,7 +1,7 @@
 import type { AuthUser } from '../../types/app.js'
 import { AppError } from '../../shared/errors/AppError.js'
 import { getOrCreateUserProfile } from '../auth/auth.service.js'
-import { findByIdForUser as findSectionByIdForUser } from '../sections/section.repository.js'
+import { findActiveByIdForUser } from '../sections/section.repository.js'
 import {
     archiveForUser,
     createForUser,
@@ -20,7 +20,7 @@ export const listCategories = async (authUser: AuthUser, query: GetCategoriesQue
     const profile = await getOrCreateUserProfile(authUser)
 
     if (query.sectionId) {
-        const section = await findSectionByIdForUser(query.sectionId, profile.id)
+        const section = await findActiveByIdForUser(query.sectionId, profile.id)
         if (!section) {
             throw new AppError('VALIDATION_ERROR', 'Invalid sectionId', 400)
         }
@@ -37,7 +37,7 @@ export const listCategories = async (authUser: AuthUser, query: GetCategoriesQue
 export const createCategory = async (authUser: AuthUser, input: CreateCategoryInput) => {
     const profile = await getOrCreateUserProfile(authUser)
 
-    const section = await findSectionByIdForUser(input.sectionId, profile.id)
+    const section = await findActiveByIdForUser(input.sectionId, profile.id)
     if (!section) {
         throw new AppError('VALIDATION_ERROR', 'Invalid sectionId', 400)
     }
@@ -75,7 +75,7 @@ export const updateCategory = async (
 
     const targetSectionId = input.sectionId ?? existing.sectionId
     if (input.sectionId) {
-        const section = await findSectionByIdForUser(input.sectionId, profile.id)
+        const section = await findActiveByIdForUser(input.sectionId, profile.id)
         if (!section) {
             throw new AppError('VALIDATION_ERROR', 'Invalid sectionId', 400)
         }

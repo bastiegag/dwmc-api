@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client'
 import { AppError } from '../../shared/errors/AppError.js'
 import { getOrCreateUserProfile } from '../auth/auth.service.js'
 import { serializeDecimal } from '../../shared/money/decimal.js'
+import { getUtcMonthRange } from '../../shared/date/month.js'
 import {
     findManyByUserProfileId,
     countManyByUserProfileId,
@@ -68,17 +69,39 @@ const serializeTransaction = (tx: TransactionWithRelations): SerializedTransacti
     }
 }
 
-const ensureAccountOwned = async (accountId: string | undefined, userProfileId: string) => {
+const ensureAccountOwned = async (
+    accountId: string | undefined,
+    userProfileId: string,
+    allowArchived = false,
+) => {
     if (!accountId) return null
     const acct = await findAccountByIdForUser(accountId, userProfileId)
     if (!acct) throw new AppError('NOT_FOUND', 'Account not found', 404)
+    if (acct.isArchived && !allowArchived) {
+        throw new AppError(
+            'VALIDATION_ERROR',
+            'Archived accounts cannot receive new transactions.',
+            422,
+        )
+    }
     return acct
 }
 
-const ensureCategoryOwned = async (categoryId: string | undefined, userProfileId: string) => {
+const ensureCategoryOwned = async (
+    categoryId: string | undefined,
+    userProfileId: string,
+    allowArchived = false,
+) => {
     if (!categoryId) return null
     const cat = await findCategoryByIdForUser(categoryId, userProfileId)
     if (!cat) throw new AppError('NOT_FOUND', 'Category not found', 404)
+    if (cat.isArchived && !allowArchived) {
+        throw new AppError(
+            'VALIDATION_ERROR',
+            'Archived categories cannot receive new transactions.',
+            422,
+        )
+    }
     return cat
 }
 
@@ -157,11 +180,7 @@ export const listTransactions = async (authUser: AuthUser, query: GetTransaction
     let startDate: string | undefined = query.startDate
     let endDate: string | undefined = query.endDate
     if (query.month) {
-        const [yStr, mStr] = query.month.split('-')
-        const y = Number(yStr)
-        const m = Number(mStr)
-        const start = new Date(Date.UTC(y, m - 1, 1))
-        const next = new Date(Date.UTC(y, m, 1))
+        const { start, next } = getUtcMonthRange(query.month)
         startDate = start.toISOString()
         // use ISO string for endDate (exclusive upper bound handled by query)
         endDate = new Date(next.getTime() - 1).toISOString()
@@ -279,10 +298,30 @@ export const updateTransaction = async (
     if (!existing) throw new AppError('NOT_FOUND', 'Transaction not found', 404)
 
     // If changing references, validate ownership
-    if (input.accountId) await ensureAccountOwned(input.accountId, profile.id)
-    if (input.fromAccountId) await ensureAccountOwned(input.fromAccountId, profile.id)
-    if (input.toAccountId) await ensureAccountOwned(input.toAccountId, profile.id)
-    if (input.categoryId) await ensureCategoryOwned(input.categoryId, profile.id)
+    if (input.accountId)
+        await ensureAccountOwned(
+            input.accountId,
+            profile.id,
+            input.accountId === existing.accountId,
+        )
+    if (input.fromAccountId)
+        await ensureAccountOwned(
+            input.fromAccountId,
+            profile.id,
+            input.fromAccountId === existing.fromAccountId,
+        )
+    if (input.toAccountId)
+        await ensureAccountOwned(
+            input.toAccountId,
+            profile.id,
+            input.toAccountId === existing.toAccountId,
+        )
+    if (input.categoryId)
+        await ensureCategoryOwned(
+            input.categoryId,
+            profile.id,
+            input.categoryId === existing.categoryId,
+        )
 
     // Merge and normalize based on resulting type
     const resultingType = input.type ?? existing.type
@@ -296,6 +335,21 @@ export const updateTransaction = async (
     }
 
     applyUpdateRelationFields(data, input, existing, resultingType)
+
+    if (
+        resultingType === 'INCOME' ||
+        resultingType === 'EXPENSE' ||
+        resultingType === 'ADJUSTMENT'
+    ) {
+        const accountId = input.accountId !== undefined ? input.accountId : existing.accountId
+        if (!accountId) {
+            throw new AppError(
+                'VALIDATION_ERROR',
+                `${resultingType} transactions require an account.`,
+                422,
+            )
+        }
+    }
 
     if (input.type !== undefined) data.type = input.type
 

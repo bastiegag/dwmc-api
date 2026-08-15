@@ -10,5 +10,6 @@ export type AuthUser = {
 export type AppBindings = {
     Variables: {
         authUser: AuthUser
+        requestId: string
     }
 }

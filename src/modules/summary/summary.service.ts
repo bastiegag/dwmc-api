@@ -1,14 +1,27 @@
 import type { AuthUser } from '../../types/app.js'
 import { getOrCreateUserProfile } from '../auth/auth.service.js'
-import { serializeDecimal } from '../../shared/money/decimal.js'
+import { fromCents, serializeDecimal, toCents } from '../../shared/money/decimal.js'
+import { getUtcMonthRange } from '../../shared/date/month.js'
 import { AppError } from '../../shared/errors/AppError.js'
 import { findTransactionsForMonth, findRecentTransactionsForMonth } from './summary.repository.js'
 import type { Transaction } from '@prisma/client'
 
 type Tx = Transaction & {
     account?: { id: string; name: string; color: string; icon: string; type?: string } | null
-    fromAccount?: { id: string; name?: string; color?: string; icon?: string } | null
-    toAccount?: { id: string; name?: string; color?: string; icon?: string } | null
+    fromAccount?: {
+        id: string
+        name?: string
+        color?: string
+        icon?: string
+        type?: string
+    } | null
+    toAccount?: {
+        id: string
+        name?: string
+        color?: string
+        icon?: string
+        type?: string
+    } | null
     category?: {
         id: string
         name: string
@@ -19,7 +32,7 @@ type Tx = Transaction & {
 }
 
 type CategoryAgg = {
-    total: number
+    totalCents: bigint
     count: number
     name: string | null
     icon: string | null
@@ -32,12 +45,12 @@ type AccountAgg = {
     type: string | null
     color: string | null
     icon: string | null
-    incomeTotal: number
-    expenseTotal: number
-    adjustmentTotal: number
-    transferInTotal: number
-    transferOutTotal: number
-    netTotal: number
+    incomeTotalCents: bigint
+    expenseTotalCents: bigint
+    adjustmentTotalCents: bigint
+    transferInTotalCents: bigint
+    transferOutTotalCents: bigint
+    netTotalCents: bigint
     transactionCount: number
 }
 
@@ -55,22 +68,15 @@ export const getMonthlySummary = async (
     const profile = await getOrCreateUserProfile(authUser)
 
     // Determine month range
-    let y: number
-    let m: number
+    let month: string
     if (query.month) {
-        const [yStr, mStr] = query.month.split('-')
-        y = Number(yStr)
-        m = Number(mStr)
+        month = query.month
     } else {
         const now = new Date()
-        y = now.getUTCFullYear()
-        m = now.getUTCMonth() + 1
+        month = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`
     }
 
-    const start = new Date(Date.UTC(y, m - 1, 1))
-    const next = new Date(Date.UTC(y, m, 1))
-    const startIso = start.toISOString()
-    const nextIso = next.toISOString()
+    const { start, next, startIso, nextIso } = getUtcMonthRange(month)
 
     try {
         const allTx = await findTransactionsForMonth(profile.id, startIso, nextIso)
@@ -82,10 +88,10 @@ export const getMonthlySummary = async (
         )
 
         // Totals
-        let incomeTotal = 0
-        let expenseTotal = 0
-        let adjustmentTotal = 0
-        let transferTotal = 0
+        let incomeTotalCents = 0n
+        let expenseTotalCents = 0n
+        let adjustmentTotalCents = 0n
+        let transferTotalCents = 0n
 
         const expenseCategoryMap = new Map<string, CategoryAgg>()
         const incomeCategoryMap = new Map<string, CategoryAgg>()
@@ -93,10 +99,10 @@ export const getMonthlySummary = async (
         const accountMap = new Map<string, AccountAgg>()
 
         for (const t of allTx as Tx[]) {
-            const amt = Number(serializeDecimal(t.amount))
+            const amountCents = toCents(t.amount)
             // Type handling
             if (t.type === 'INCOME') {
-                incomeTotal += amt
+                incomeTotalCents += amountCents
                 // account-level
                 if (t.accountId) {
                     const key = t.accountId
@@ -107,16 +113,16 @@ export const getMonthlySummary = async (
                         type: t.account?.type ?? null,
                         color: t.account?.color ?? null,
                         icon: t.account?.icon ?? null,
-                        incomeTotal: 0,
-                        expenseTotal: 0,
-                        adjustmentTotal: 0,
-                        transferInTotal: 0,
-                        transferOutTotal: 0,
-                        netTotal: 0,
+                        incomeTotalCents: 0n,
+                        expenseTotalCents: 0n,
+                        adjustmentTotalCents: 0n,
+                        transferInTotalCents: 0n,
+                        transferOutTotalCents: 0n,
+                        netTotalCents: 0n,
                         transactionCount: 0,
                     }
-                    acc.incomeTotal += amt
-                    acc.netTotal += amt
+                    acc.incomeTotalCents += amountCents
+                    acc.netTotalCents += amountCents
                     acc.transactionCount += 1
                     accountMap.set(key, acc)
                 }
@@ -126,18 +132,18 @@ export const getMonthlySummary = async (
                     const key = t.categoryId
                     const existing = incomeCategoryMap.get(key)
                     const entry: CategoryAgg = existing ?? {
-                        total: 0,
+                        totalCents: 0n,
                         count: 0,
                         name: t.category.name ?? null,
                         icon: t.category.icon ?? null,
                         section: t.category.section ?? null,
                     }
-                    entry.total += amt
+                    entry.totalCents += amountCents
                     entry.count += 1
                     incomeCategoryMap.set(key, entry)
                 }
             } else if (t.type === 'EXPENSE') {
-                expenseTotal += amt
+                expenseTotalCents += amountCents
                 if (t.accountId) {
                     const key = t.accountId
                     const existing = accountMap.get(key)
@@ -147,16 +153,16 @@ export const getMonthlySummary = async (
                         type: t.account?.type ?? null,
                         color: t.account?.color ?? null,
                         icon: t.account?.icon ?? null,
-                        incomeTotal: 0,
-                        expenseTotal: 0,
-                        adjustmentTotal: 0,
-                        transferInTotal: 0,
-                        transferOutTotal: 0,
-                        netTotal: 0,
+                        incomeTotalCents: 0n,
+                        expenseTotalCents: 0n,
+                        adjustmentTotalCents: 0n,
+                        transferInTotalCents: 0n,
+                        transferOutTotalCents: 0n,
+                        netTotalCents: 0n,
                         transactionCount: 0,
                     }
-                    acc.expenseTotal += amt
-                    acc.netTotal -= amt
+                    acc.expenseTotalCents += amountCents
+                    acc.netTotalCents -= amountCents
                     acc.transactionCount += 1
                     accountMap.set(key, acc)
                 }
@@ -165,18 +171,18 @@ export const getMonthlySummary = async (
                     const key = t.categoryId
                     const existing = expenseCategoryMap.get(key)
                     const entry: CategoryAgg = existing ?? {
-                        total: 0,
+                        totalCents: 0n,
                         count: 0,
                         name: t.category.name ?? null,
                         icon: t.category.icon ?? null,
                         section: t.category.section ?? null,
                     }
-                    entry.total += amt
+                    entry.totalCents += amountCents
                     entry.count += 1
                     expenseCategoryMap.set(key, entry)
                 }
             } else if (t.type === 'ADJUSTMENT') {
-                adjustmentTotal += amt
+                adjustmentTotalCents += amountCents
                 if (t.accountId) {
                     const key = t.accountId
                     const existing = accountMap.get(key)
@@ -186,21 +192,21 @@ export const getMonthlySummary = async (
                         type: t.account?.type ?? null,
                         color: t.account?.color ?? null,
                         icon: t.account?.icon ?? null,
-                        incomeTotal: 0,
-                        expenseTotal: 0,
-                        adjustmentTotal: 0,
-                        transferInTotal: 0,
-                        transferOutTotal: 0,
-                        netTotal: 0,
+                        incomeTotalCents: 0n,
+                        expenseTotalCents: 0n,
+                        adjustmentTotalCents: 0n,
+                        transferInTotalCents: 0n,
+                        transferOutTotalCents: 0n,
+                        netTotalCents: 0n,
                         transactionCount: 0,
                     }
-                    acc.adjustmentTotal += amt
-                    acc.netTotal += amt
+                    acc.adjustmentTotalCents += amountCents
+                    acc.netTotalCents += amountCents
                     acc.transactionCount += 1
                     accountMap.set(key, acc)
                 }
             } else if (t.type === 'TRANSFER') {
-                transferTotal += amt
+                transferTotalCents += amountCents
                 // fromAccount -> transferOut
                 if (t.fromAccountId) {
                     const key = t.fromAccountId
@@ -208,19 +214,19 @@ export const getMonthlySummary = async (
                     const acc: AccountAgg = existing ?? {
                         accountId: key,
                         name: t.fromAccount?.name ?? null,
-                        type: null,
+                        type: t.fromAccount?.type ?? null,
                         color: t.fromAccount?.color ?? null,
                         icon: t.fromAccount?.icon ?? null,
-                        incomeTotal: 0,
-                        expenseTotal: 0,
-                        adjustmentTotal: 0,
-                        transferInTotal: 0,
-                        transferOutTotal: 0,
-                        netTotal: 0,
+                        incomeTotalCents: 0n,
+                        expenseTotalCents: 0n,
+                        adjustmentTotalCents: 0n,
+                        transferInTotalCents: 0n,
+                        transferOutTotalCents: 0n,
+                        netTotalCents: 0n,
                         transactionCount: 0,
                     }
-                    acc.transferOutTotal += amt
-                    acc.netTotal -= amt
+                    acc.transferOutTotalCents += amountCents
+                    acc.netTotalCents -= amountCents
                     acc.transactionCount += 1
                     accountMap.set(key, acc)
                 }
@@ -231,19 +237,19 @@ export const getMonthlySummary = async (
                     const acc: AccountAgg = existing ?? {
                         accountId: key,
                         name: t.toAccount?.name ?? null,
-                        type: null,
+                        type: t.toAccount?.type ?? null,
                         color: t.toAccount?.color ?? null,
                         icon: t.toAccount?.icon ?? null,
-                        incomeTotal: 0,
-                        expenseTotal: 0,
-                        adjustmentTotal: 0,
-                        transferInTotal: 0,
-                        transferOutTotal: 0,
-                        netTotal: 0,
+                        incomeTotalCents: 0n,
+                        expenseTotalCents: 0n,
+                        adjustmentTotalCents: 0n,
+                        transferInTotalCents: 0n,
+                        transferOutTotalCents: 0n,
+                        netTotalCents: 0n,
                         transactionCount: 0,
                     }
-                    acc.transferInTotal += amt
-                    acc.netTotal += amt
+                    acc.transferInTotalCents += amountCents
+                    acc.netTotalCents += amountCents
                     acc.transactionCount += 1
                     accountMap.set(key, acc)
                 }
@@ -251,7 +257,7 @@ export const getMonthlySummary = async (
         }
 
         const transactionCount = allTx.length
-        const netTotal = incomeTotal - expenseTotal + adjustmentTotal
+        const netTotalCents = incomeTotalCents - expenseTotalCents + adjustmentTotalCents
 
         // Build top categories arrays
         const topExpenseCategories = Array.from(expenseCategoryMap.entries())
@@ -260,11 +266,14 @@ export const getMonthlySummary = async (
                 name: v.name,
                 icon: v.icon,
                 section: v.section,
-                total: serializeDecimal(v.total),
+                total: fromCents(v.totalCents),
                 transactionCount: v.count,
-                percentage: expenseTotal === 0 ? 0 : (v.total / expenseTotal) * 100,
+                percentage:
+                    expenseTotalCents === 0n
+                        ? 0
+                        : (Number(v.totalCents) / Number(expenseTotalCents)) * 100,
             }))
-            .sort((a, b) => Number(b.total) - Number(a.total))
+            .sort((a, b) => b.total - a.total)
 
         const topIncomeCategories = Array.from(incomeCategoryMap.entries())
             .map(([categoryId, v]) => ({
@@ -272,11 +281,14 @@ export const getMonthlySummary = async (
                 name: v.name,
                 icon: v.icon,
                 section: v.section,
-                total: serializeDecimal(v.total),
+                total: fromCents(v.totalCents),
                 transactionCount: v.count,
-                percentage: incomeTotal === 0 ? 0 : (v.total / incomeTotal) * 100,
+                percentage:
+                    incomeTotalCents === 0n
+                        ? 0
+                        : (Number(v.totalCents) / Number(incomeTotalCents)) * 100,
             }))
-            .sort((a, b) => Number(b.total) - Number(a.total))
+            .sort((a, b) => b.total - a.total)
 
         const accountBreakdown = Array.from(accountMap.values()).map((a) => ({
             accountId: a.accountId,
@@ -284,12 +296,12 @@ export const getMonthlySummary = async (
             type: a.type,
             color: a.color,
             icon: a.icon,
-            incomeTotal: serializeDecimal(a.incomeTotal),
-            expenseTotal: serializeDecimal(a.expenseTotal),
-            adjustmentTotal: serializeDecimal(a.adjustmentTotal),
-            transferInTotal: serializeDecimal(a.transferInTotal),
-            transferOutTotal: serializeDecimal(a.transferOutTotal),
-            netTotal: serializeDecimal(a.netTotal),
+            incomeTotal: fromCents(a.incomeTotalCents),
+            expenseTotal: fromCents(a.expenseTotalCents),
+            adjustmentTotal: fromCents(a.adjustmentTotalCents),
+            transferInTotal: fromCents(a.transferInTotalCents),
+            transferOutTotal: fromCents(a.transferOutTotalCents),
+            netTotal: fromCents(a.netTotalCents),
             transactionCount: a.transactionCount,
         }))
 
@@ -307,17 +319,17 @@ export const getMonthlySummary = async (
         }))
 
         return {
-            month: `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}`,
+            month: `${String(start.getUTCFullYear()).padStart(4, '0')}-${String(start.getUTCMonth() + 1).padStart(2, '0')}`,
             period: {
                 startDate: start.toISOString().slice(0, 10),
                 endDate: new Date(next.getTime() - 1).toISOString().slice(0, 10),
             },
             totals: {
-                incomeTotal: serializeDecimal(incomeTotal),
-                expenseTotal: serializeDecimal(expenseTotal),
-                adjustmentTotal: serializeDecimal(adjustmentTotal),
-                transferTotal: serializeDecimal(transferTotal),
-                netTotal: serializeDecimal(netTotal),
+                incomeTotal: fromCents(incomeTotalCents),
+                expenseTotal: fromCents(expenseTotalCents),
+                adjustmentTotal: fromCents(adjustmentTotalCents),
+                transferTotal: fromCents(transferTotalCents),
+                netTotal: fromCents(netTotalCents),
                 transactionCount,
             },
             topExpenseCategories,

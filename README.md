@@ -1,233 +1,136 @@
-# dwmc-api
+# Dude, Where's My Cash? API
 
-A modern, production-minded REST API backend for a personal budget application.
+`dwmc-api` is the Hono/TypeScript backend for Dude, Where's My Cash?, a personal budgeting application. It validates Supabase access tokens, applies user ownership rules, persists domain data with Prisma/PostgreSQL, and calculates account, budget, and monthly-summary values.
 
 ## Stack
 
-| Layer      | Technology                     |
-| ---------- | ------------------------------ |
-| Runtime    | Node.js + TypeScript (strict)  |
-| Framework  | Hono                           |
-| ORM        | Prisma                         |
-| Database   | PostgreSQL (local via Docker)  |
-| Validation | Zod                            |
-| Auth       | Supabase Auth (JWT validation) |
-| Testing    | Vitest                         |
-| Linting    | ESLint 9 (flat config)         |
-| Formatting | Prettier                       |
+The versions and scripts are maintained in [`package.json`](package.json). The backend uses Node.js, TypeScript, Hono, Prisma, PostgreSQL, Zod, Supabase Auth, Vitest, ESLint, Prettier, Husky, and Changesets.
 
-## Project structure
+## Architecture
 
-```
-src/
-  app.ts              # Hono app: middleware, error handler, routes
-  server.ts           # Node.js entry point (starts HTTP server)
+The request path is:
 
-  config/
-    env.ts            # Zod-validated environment variables (fail-fast)
-
-  db/
-    prisma.ts         # Prisma client singleton
-
-  lib/
-    supabase.ts       # Backend Supabase client (service role)
-
-  modules/
-    auth/
-      auth.routes.ts      # GET /api/v1/auth/me
-      auth.middleware.ts  # JWT validation middleware
-      auth.service.ts     # Business logic (upsert UserProfile)
-      auth.schema.ts      # Zod schemas for auth types
-    sections/
-      section.routes.ts
-      section.schema.ts
-      section.service.ts
-      section.repository.ts
-    categories/
-      category.routes.ts
-      category.schema.ts
-      category.service.ts
-      category.repository.ts
-    budgets/
-      budget.routes.ts
-      budget.schema.ts
-      budget.service.ts
-      budget.repository.ts
-    accounts/
-      account.routes.ts
-      account.schema.ts
-      account.service.ts
-      account.repository.ts
-    transactions/
-      transaction.routes.ts
-      transaction.schema.ts
-      transaction.service.ts
-      transaction.repository.ts
-    summary/
-      summary.routes.ts
-      summary.schema.ts
-      summary.service.ts
-      summary.repository.ts
-
-  shared/
-    errors/
-      AppError.ts         # Typed application error class
-      error-handler.ts    # Central Hono onError handler
-    http/
-      api-response.ts     # successResponse / errorResponse helpers
-    validation/
-      validate.ts         # Reusable Zod body validator
-    logger/
-      request-logger.ts   # Request/response logger middleware
-
-  types/
-    app.ts            # AppBindings, AuthUser (Hono context types)
-
-  tests/
-    setup.ts              # Global test env setup
-    health.test.ts
-    readiness.test.ts
-    auth.test.ts
-    error-handler.test.ts
-
-prisma/
-  schema.prisma       # Database schema
-  seed.ts             # Development seed script
-
-docs/
-  architecture.md
-  api.md
-  auth.md
-  accounts.md
-  budgets.md
-  categories.md
-  conventions.md
-  local-development.md
-  RELEASING.md
-  summary.md
-  transactions.md
+```text
+Hono route
+-> Zod parsing
+-> auth middleware where required
+-> service business rules
+-> repository Prisma query
+-> response helper
 ```
 
-## Quick start
+See [architecture](docs/architecture.md) and [database](docs/database.md).
 
-### 1. Prerequisites
+## Getting Started
 
-- Node.js 20+
-- Docker + Docker Compose
-- A [Supabase](https://supabase.com) project (free tier is fine)
+Prerequisites:
 
-### 2. Install dependencies
+- Node.js 20 or later.
+- Docker and Docker Compose for local PostgreSQL.
+- A Supabase project.
 
 ```bash
 npm install
-```
-
-### 3. Configure environment
-
-```bash
 cp .env.example .env
-```
-
-Edit `.env` and fill in your Supabase credentials. See `docs/auth.md` for details on which keys to use.
-
-### 4. Start PostgreSQL
-
-```bash
+# Fill in the required Supabase and database values.
 docker compose up -d
-```
-
-### 5. Run Prisma migrations
-
-```bash
 npm run db:migrate
-```
-
-### 6. Start the dev server
-
-```bash
 npm run dev
 ```
 
-The server starts at `http://localhost:3000`.
+The development server listens on port `3000` by default. The frontend repository's Vite development server proxies `/api/v1` to this server.
 
-## Authentication
+See the package scripts and [releasing](docs/RELEASING.md) for migration and validation guidance.
 
-The frontend sends the Supabase access token in every protected request:
+## Render Deployment
 
+The production API is intended to run as a stateless Render Free Web Service.
+Render hosts the Node.js process, Supabase hosts PostgreSQL, and Supabase Auth
+continues to issue and validate browser access tokens. Configure `APP_ORIGIN`
+with the exact Vercel production origin; do not use `*` in production.
+
+Use these Render commands:
+
+```bash
+# Build Command
+npm ci && npm run db:generate && npm run build
+
+# Start Command
+npm start
 ```
-Authorization: ******
+
+Use `/health` as the Render Health Check Path. Run `npm run db:migrate:deploy`
+as a controlled release step against the intended Supabase database before
+deploying code that requires the migration. Migrations are not run by the
+Render start command. The complete release order and smoke-test plan are in
+[releasing](docs/releasing.md).
+
+## Environment Variables
+
+The validated backend variables are:
+
+| Variable                    | Purpose                                                                |
+| --------------------------- | ---------------------------------------------------------------------- |
+| `NODE_ENV`                  | `development`, `test`, or `production`.                                |
+| `PORT`                      | HTTP port, default `3000`.                                             |
+| `APP_ORIGIN`                | Allowed CORS origin.                                                   |
+| `DATABASE_URL`              | PostgreSQL connection string.                                          |
+| `SUPABASE_URL`              | Supabase project URL.                                                  |
+| `SUPABASE_ANON_KEY`         | Supabase anonymous key retained for backend environment compatibility. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Backend-only key used for server-side Supabase Auth validation.        |
+
+Never expose `SUPABASE_SERVICE_ROLE_KEY` to the browser or commit real credentials.
+
+## API
+
+The public API namespace is `/api/v1`. Public endpoints are `GET /health` and `GET /ready`. Authenticated resources are auth profile bootstrap, sections, categories, accounts, transactions, monthly summary, and budgets. Authentication behavior is documented in [domains/auth.md](docs/domains/auth.md).
+
+See [API design](docs/api.md) for the endpoint inventory and response contract. The frontend consumption pattern is documented in `dwmc-web/docs/api.md` in the sibling repository.
+
+## Database
+
+The Prisma schema contains `UserProfile`, `Section`, `Category`, `Account`, `Transaction`, and `Budget`. All business records are scoped to `UserProfile`. See [database](docs/database.md).
+
+## Testing
+
+Tests use Vitest with mocked Prisma and Supabase dependencies, so the normal test suite does not require a live database or real credentials. See [testing](docs/testing.md).
+
+```bash
+npm run test
+npm run typecheck
+npm run lint
+npm run build
 ```
-
-The backend validates the token with Supabase, extracts the user identity, and attaches it to the Hono context. See `docs/auth.md` for the full flow.
-
-## API endpoints
-
-| Method | Path                   | Auth     | Description                    |
-| ------ | ---------------------- | -------- | ------------------------------ |
-| GET    | /health                | public   | Liveness check                 |
-| GET    | /ready                 | public   | Readiness check (DB ping)      |
-| GET    | /api/v1/auth/me        | required | Current user + profile         |
-| GET    | /api/v1/sections       | required | List sections                  |
-| POST   | /api/v1/sections       | required | Create section                 |
-| GET    | /api/v1/sections/:id   | required | Get section by id              |
-| PATCH  | /api/v1/sections/:id   | required | Update section                 |
-| DELETE | /api/v1/sections/:id   | required | Archive section (soft delete)  |
-| GET    | /api/v1/categories     | required | List categories                |
-| POST   | /api/v1/categories     | required | Create category                |
-| GET    | /api/v1/categories/:id | required | Get category by id             |
-| PATCH  | /api/v1/categories/:id | required | Update category                |
-| DELETE | /api/v1/categories/:id | required | Archive category (soft delete) |
-| GET    | /api/v1/accounts       | required | List accounts                  |
-| POST   | /api/v1/accounts       | required | Create account                 |
-| GET    | /api/v1/accounts/:id   | required | Get account by id              |
-| PATCH  | /api/v1/accounts/:id   | required | Update account                 |
-| DELETE | /api/v1/accounts/:id   | required | Archive account (soft delete)  |
-
-See `docs/api.md` for request/response details.
-
-## Releases
-
-Backend releases use Semantic Versioning, Changesets, Conventional Commits, Git tags, and GitHub Releases. The backend package version is independent from the frontend repository version, and the public HTTP contract stays on `/api/v1` unless a deliberate breaking API migration is introduced.
-
-The release workflow in `.github/workflows/release.yml` runs `npm run validate` on pushes to `main`, then lets Changesets create or update the release PR, tags, and GitHub Release notes.
-
-See [docs/RELEASING.md](docs/RELEASING.md) for the full workflow.
 
 ## Scripts
 
-| Script                  | Description                                 |
-| ----------------------- | ------------------------------------------- |
-| `npm run dev`           | Start dev server with hot reload            |
-| `npm run build`         | Compile TypeScript to `dist/`               |
-| `npm start`             | Run compiled server                         |
-| `npm run typecheck`     | Type-check without emitting                 |
-| `npm run lint`          | ESLint (zero warnings)                      |
-| `npm run lint:fix`      | ESLint with auto-fix                        |
-| `npm run format`        | Prettier write                              |
-| `npm run format:check`  | Prettier check                              |
-| `npm run validate`      | Format check, lint, typecheck, tests, build |
-| `npm test`              | Run tests once                              |
-| `npm run test:watch`    | Run tests in watch mode                     |
-| `npm run test:coverage` | Test coverage report                        |
-| `npm run db:generate`   | Regenerate Prisma client                    |
-| `npm run db:migrate`    | Run pending migrations                      |
-| `npm run db:studio`     | Open Prisma Studio                          |
-| `npm run db:reset`      | Reset and re-seed the database              |
-| `npm run db:seed`       | Run seed script                             |
+| Command                     | Purpose                                            |
+| --------------------------- | -------------------------------------------------- |
+| `npm run dev`               | Start the watch-mode server.                       |
+| `npm run build`             | Compile TypeScript to `dist`.                      |
+| `npm start`                 | Run the compiled server.                           |
+| `npm run typecheck`         | Type-check without emitting.                       |
+| `npm run lint`              | Run ESLint with zero warnings.                     |
+| `npm run format:check`      | Check Prettier formatting.                         |
+| `npm run test`              | Run Vitest once.                                   |
+| `npm run validate`          | Run formatting, lint, typecheck, tests, and build. |
+| `npm run db:generate`       | Generate the Prisma client.                        |
+| `npm run db:migrate`        | Run Prisma development migrations.                 |
+| `npm run db:migrate:deploy` | Apply committed migrations in production.          |
+| `npm run db:studio`         | Open Prisma Studio.                                |
+| `npm run db:reset`          | Reset the database and rerun migrations.           |
+| `npm run db:seed`           | Run the development seed script.                   |
 
-## Current modules
+## Documentation
 
-- `auth` — Supabase JWT validation and profile bootstrap. See `docs/auth.md`.
-- `sections` — top-level budget groupings. See `docs/categories.md` and `docs/architecture.md`.
-- `categories` — child budget labels scoped to sections. See `docs/categories.md`.
-- `accounts` — balance-tracking accounts with computed balances. See `docs/accounts.md`.
-- `budgets` — monthly spending limits by category. See `docs/budgets.md`.
-- `transactions` — record income, expenses, transfers, and adjustments. See `docs/transactions.md`.
-- `summary` — monthly financial rollups and recent activity. See `docs/summary.md`.
-
-## Future ideas
-
-- `recurring` — recurring transaction rules
-- `reports` — aggregated summaries
-
-See `docs/architecture.md` for how to add a new module.
+- [Architecture](docs/architecture.md)
+- [API design](docs/api.md)
+- [Authentication](docs/domains/auth.md)
+- [Database](docs/database.md)
+- [Testing](docs/testing.md)
+- [Accounts](docs/domains/accounts.md)
+- [Budgets](docs/domains/budgets.md)
+- [Categories and sections](docs/domains/categories.md)
+- [Monthly summary](docs/domains/summary.md)
+- [Transactions](docs/domains/transactions.md)
+- [Releasing](docs/releasing.md)

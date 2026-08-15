@@ -7,13 +7,29 @@ const queryBooleanSchema = z
 
 export const transactionTypeSchema = z.enum(['INCOME', 'EXPENSE', 'TRANSFER', 'ADJUSTMENT'])
 
+export const transactionDateSchema = z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .refine(
+        (value) => {
+            const [year = NaN, month = NaN, day = NaN] = value.split('-').map(Number)
+            const date = new Date(Date.UTC(year, month - 1, day))
+            return (
+                date.getUTCFullYear() === year &&
+                date.getUTCMonth() === month - 1 &&
+                date.getUTCDate() === day
+            )
+        },
+        { message: 'Date must be a valid calendar date in YYYY-MM-DD format' },
+    )
+
 const merchantSchema = z.string().trim().max(120).nullable().optional()
 const noteSchema = z.string().trim().max(500).nullable().optional()
 
 const incomeSchema = z.object({
     type: z.literal('INCOME'),
     amount: z.coerce.number().refine((n) => n > 0, { message: 'Amount must be greater than 0' }),
-    date: z.string(),
+    date: transactionDateSchema,
     accountId: z.string().min(1),
     categoryId: z.string().min(1).nullable().optional(),
     merchant: merchantSchema,
@@ -23,7 +39,7 @@ const incomeSchema = z.object({
 const expenseSchema = z.object({
     type: z.literal('EXPENSE'),
     amount: z.coerce.number().refine((n) => n > 0, { message: 'Amount must be greater than 0' }),
-    date: z.string(),
+    date: transactionDateSchema,
     accountId: z.string().min(1),
     categoryId: z.string().min(1).nullable().optional(),
     merchant: merchantSchema,
@@ -33,7 +49,7 @@ const expenseSchema = z.object({
 const transferSchema = z.object({
     type: z.literal('TRANSFER'),
     amount: z.coerce.number().refine((n) => n > 0, { message: 'Amount must be greater than 0' }),
-    date: z.string(),
+    date: transactionDateSchema,
     fromAccountId: z.string().min(1),
     toAccountId: z.string().min(1),
     note: noteSchema,
@@ -42,7 +58,7 @@ const transferSchema = z.object({
 const adjustmentSchema = z.object({
     type: z.literal('ADJUSTMENT'),
     amount: z.coerce.number(),
-    date: z.string(),
+    date: transactionDateSchema,
     accountId: z.string().min(1),
     note: noteSchema,
 })
@@ -57,7 +73,7 @@ export const createTransactionSchema = z.discriminatedUnion('type', [
 export const updateTransactionSchema = z.object({
     type: transactionTypeSchema.optional(),
     amount: z.coerce.number().optional(),
-    date: z.string().optional(),
+    date: transactionDateSchema.optional(),
     accountId: z.string().min(1).optional().nullable(),
     fromAccountId: z.string().min(1).optional().nullable(),
     toAccountId: z.string().min(1).optional().nullable(),
@@ -78,15 +94,13 @@ export const getTransactionsQuerySchema = z.object({
     month: z
         .string()
         .regex(/^\d{4}-\d{2}$/)
+        .refine((value) => {
+            const month = Number(value.slice(5))
+            return month >= 1 && month <= 12
+        }, 'Month must be a valid calendar month')
         .optional(),
-    startDate: z
-        .string()
-        .regex(/^\d{4}-\d{2}-\d{2}$/)
-        .optional(),
-    endDate: z
-        .string()
-        .regex(/^\d{4}-\d{2}-\d{2}$/)
-        .optional(),
+    startDate: transactionDateSchema.optional(),
+    endDate: transactionDateSchema.optional(),
     search: z.string().trim().max(120).optional(),
     includeArchived: queryBooleanSchema,
     page: z.coerce.number().int().positive().default(1),

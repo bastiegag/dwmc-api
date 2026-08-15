@@ -1,117 +1,159 @@
 # Releasing
 
-This repository uses independent backend versioning. The backend package version in `package.json` is not tied to the frontend repository version.
+`dwmc-api` is versioned independently from `dwmc-web`. The package version, Git tags/GitHub Releases, and public API namespace `/api/v1` are separate concerns.
 
-The release workflow in `.github/workflows/release.yml` runs `npm run validate` on pushes to `main`, then uses Changesets to version the backend and create or update the release PR.
+## Quality Gate
 
-## Versioning model
+The backend validation script runs formatting checks, lint, typecheck, Vitest, and the TypeScript build:
 
-There are three different version concepts:
+```bash
+npm run validate
+```
 
-- Backend package version: stored in `package.json` and updated by Changesets.
-- Git tags and GitHub Releases: created from the versioned backend release process, such as `v0.5.2`.
-- API contract version: the public HTTP namespace under `/api/v1`.
+The CI workflow runs the equivalent checks on pull requests and pushes to
+`main`. There is currently no release or migration workflow in this repository.
 
-These are intentionally separate. A backend patch or minor release does not automatically change the API contract version.
+## Production Architecture
 
-## SemVer policy
+The production request path is:
 
-This project follows Semantic Versioning for the backend package:
+```text
+dwmc-web on Vercel
+	-> dwmc-api as a stateless Render Free Web Service
+	-> Prisma
+	-> Supabase PostgreSQL
+```
 
-- Patch: bug fixes, validation fixes, logging improvements, internal refactors, and backward-compatible migration work.
-- Minor: backward-compatible features, new endpoints, optional fields, new filters, or additive database work.
-- Major: intentionally incompatible backend or API behavior.
+Supabase Auth remains the authentication provider. The browser sends its
+Supabase access token as `Authorization: Bearer <token>`; the API validates it
+with its backend Supabase client and enforces ownership in its services and
+repositories. Render persistent disks, local files, process memory, and local
+sessions are not application storage.
 
-Because the backend is still below `1.0.0`, the team can treat carefully managed breaking changes as minor releases if that better matches the current contract strategy. Once the backend reaches `1.0.0`, breaking changes should be treated as major releases.
+## Render Service
 
-## Changesets
+Configure a Render Web Service from `main` after this preparation is merged.
+Use Node.js and these exact commands:
 
-Changesets are used to collect release notes and drive version bumps.
+```text
+Build Command: npm ci && npm run db:generate && npm run build
+Start Command: npm start
+Health Check Path: /health
+```
 
-Use:
+`npm start` runs the compiled `dist/server.js`. The server uses Render's
+`PORT`, falls back to `3000` locally, binds to `0.0.0.0`, and logs only the
+environment and bound port. Render Git auto-deploy from `main` is the intended
+simple deployment trigger; GitHub Actions remains the quality and controlled
+migration workflow rather than a competing deploy trigger.
+
+Render Free may spin the service down after inactivity, so cold starts are
+expected. The service does not require a persistent disk.
+
+## Environment Variables
+
+Set these values in Render. Never commit or print their values:
+
+| Variable                    | Required | Secret | Source   | Notes                                                                                           |
+| --------------------------- | -------- | ------ | -------- | ----------------------------------------------------------------------------------------------- |
+| `NODE_ENV`                  | Yes      | No     | Render   | Set to `production`.                                                                            |
+| `DATABASE_URL`              | Yes      | Yes    | Supabase | PostgreSQL URL for the target Supabase project.                                                 |
+| `SUPABASE_URL`              | Yes      | No     | Supabase | Project URL used by backend Auth validation.                                                    |
+| `SUPABASE_ANON_KEY`         | Yes      | No     | Supabase | Publishable/anon key required by the current env contract; not used for server-side validation. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes      | Yes    | Supabase | Backend-only key used by `supabase.auth.getUser`; never expose to Vercel/browser code.          |
+| `APP_ORIGIN`                | Yes      | No     | Vercel   | Exact frontend origin, such as `https://app.example.com`; no trailing path.                     |
+| `PORT`                      | No       | No     | Render   | Render supplies this automatically. Do not configure it manually.                               |
+
+Use separate Supabase projects and separate Render environment values for
+staging and production. Do not reuse production credentials in staging.
+
+## CORS
+
+`APP_ORIGIN` controls the single allowed browser origin. The API explicitly
+allows `Authorization` and `Content-Type`, and supports the resource methods
+used by the frontend plus OPTIONS preflight. Local development keeps its
+localhost origin in `.env`; production must use the Vercel production origin.
+
+Preview Vercel origins are not automatically allowed. If preview access is
+needed, introduce an explicit allowlist or deliberate origin matcher; do not
+switch production CORS to a wildcard.
+
+## Changesets and GitHub Actions
+
+Create a release note with:
 
 ```bash
 npm run changeset
 ```
 
-Choose patch, minor, or major based on the behavior change, then write a user-facing note. Changesets are generally not required for documentation-only updates, CI-only changes, or internal refactoring with no release impact.
+Changesets configuration is present for release notes and versioning, but no
+GitHub Actions release workflow is currently configured. The backend is private
+and is not published to npm.
 
-Versioning is handled with:
+Use `npm run version` to consume changesets and update the package/changelog state. `npm run release` is the configured Changesets tag command; it is not an npm publication command.
 
-```bash
-npm run version
-```
+## Database Migrations
 
-This updates `package.json`, consumes changesets, and generates `CHANGELOG.md`.
-
-## Local tags
-
-After a versioned release is ready, use:
+Schema changes require an approved Prisma migration and regenerated client. Create
+development migrations locally, but apply the committed migration history to a
+production database with `prisma migrate deploy`:
 
 ```bash
-npm run release
+npm run db:migrate
+npm run db:generate
+npm run db:migrate:deploy
 ```
 
-This is meant for local tag creation only. It must not publish to npm.
+The release workflows do not automatically apply production database migrations. Run
+`npm run db:migrate:deploy` only against the intended production `DATABASE_URL`, after
+confirming a current backup and reviewing the SQL. Migration ordering, deployment
+timing, and rollback strategy must be handled by the deployment process that owns the
+target database. Do not use `db:reset`, `prisma migrate reset`, or `prisma migrate dev`
+against production.
 
-## Changelog
+Render Free does not provide a normal one-off migration job, so use a controlled
+external release step such as a protected GitHub Actions workflow or an operator
+machine with `DATABASE_URL` supplied as a secret. The repository currently has
+no migration automation workflow; do not claim this is automated. Never add
+migrations to the Render Start Command. Code rollback does not automatically
+reverse a Prisma migration, so prefer backward-compatible schema changes.
 
-Changesets writes user-facing release notes into `CHANGELOG.md`. The changelog should reflect backend behavior changes only and should not copy frontend release notes.
+Recommended order:
 
-## Conventional Commits
+```text
+Development -> CI -> review migration -> prisma migrate deploy -> Render
+deployment -> /health -> /ready -> authenticated API smoke test -> frontend
+verification when its contract changed
+```
 
-Commit messages are validated with Commitlint and Husky.
+Supabase, not Render, owns PostgreSQL backup and recovery. The free portfolio
+environment should not imply production-grade backup guarantees.
 
-Examples that should pass:
+## Smoke Test
 
-- `feat(auth): add refresh token rotation`
-- `fix(budgets): recalculate totals after transaction creation`
-- `chore(deps): update backend dependencies`
-- `ci(release): add automated GitHub releases`
+Use a staging or dedicated test account and safe test data:
 
-If you need to describe a security fix, `fix(auth): reject expired sessions` is the default preferred form.
+1. `GET /health` returns `200` with `{ "data": { "status": "ok" } }`.
+2. `GET /ready` returns `200` when PostgreSQL is reachable and `503` when it is unavailable.
+3. A protected endpoint without a bearer token returns `401`.
+4. A valid Supabase token can read and safely write its own test data.
+5. A second account cannot read or mutate the first account's records.
+6. No response or log contains tokens, passwords, database credentials, SQL,
+   stack traces, or a localhost public URL.
 
-## GitHub Actions
+## Contract Compatibility
 
-The release workflow runs on pushes to `main`, installs dependencies with `npm ci`, runs the backend validation suite, and then lets Changesets create or update the Version PR.
+Keep `/api/v1` for backward-compatible changes. Additive fields or optional filters can remain within the current namespace; incompatible changes require an explicit migration strategy and coordinated frontend work. Before changing a frontend-consumed endpoint, inspect `../dwmc-web` when available and update its API modules, types, query behavior, tests, and docs.
 
-Repository permissions required for the release workflow:
+## Release Review
 
-- `contents: write`
-- `pull-requests: write`
+Before merging a release-worthy change, review:
 
-## Database migrations
+- `npm run validate` output.
+- API and authentication documentation.
+- Prisma migration safety and generated client state.
+- Ownership and security behavior.
+- Frontend compatibility in the sibling repository.
+- A Changeset when the behavior or operational impact warrants a release note.
 
-Migrations are not automatically executed as part of release creation.
-
-Use these categories when reviewing a release note:
-
-- Backward-compatible additive migration
-- Destructive migration
-- Data migration
-- Rollback-safe migration
-- Deployment-order-sensitive migration
-
-Prefer expand-and-contract when a change must stay compatible with existing clients.
-
-## Frontend and backend compatibility
-
-The frontend and backend versions remain independent.
-
-Compatibility is documented only when a change requires coordination. A backend patch or minor release should not force a frontend release unless the API contract changes.
-
-## Hotfixes
-
-A hotfix should branch from a production-compatible state, include a regression test, add a patch changeset, pass validation, and then go through the normal Version PR and release process.
-
-## Breaking changes
-
-Do not introduce `/api/v2` just because the backend package version changes. Only add a new API version when backward compatibility cannot be maintained through additive changes or deprecation.
-
-## Release recovery
-
-If a release fails after the Version PR is merged, fix the underlying issue, update the changeset or version commit if needed, and re-run the normal release process. Do not manually rewrite published history unless recovery requires it.
-
-## GitHub configuration
-
-The repository needs the default `GITHUB_TOKEN` available to Actions. No npm publishing token is required because this backend is not published to npm.
+No automated production migration runner is configured in this repository.
