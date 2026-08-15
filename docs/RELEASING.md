@@ -36,7 +36,7 @@ Configure a Render Web Service from `main` after this preparation is merged.
 Use Node.js and these exact commands:
 
 ```text
-Build Command: npm ci && npm run db:generate && npm run build
+Build Command: npm ci --include=dev && npm run db:generate && npm run build
 Start Command: npm start
 Health Check Path: /health
 ```

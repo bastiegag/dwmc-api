@@ -53,7 +53,7 @@ Use these Render commands:
 
 ```bash
 # Build Command
-npm ci && npm run db:generate && npm run build
+npm ci --include=dev && npm run db:generate && npm run build
 
 # Start Command
 npm start
