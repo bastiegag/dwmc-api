@@ -25,7 +25,7 @@ See [architecture](docs/architecture.md) and [database](docs/database.md).
 
 Prerequisites:
 
-- Node.js 20 or later.
+- Node.js 24.x.
 - Docker and Docker Compose for local PostgreSQL.
 - A Supabase project.
 
@@ -71,17 +71,16 @@ Migrations are never run by the Render start command.
 
 The validated backend variables are:
 
-| Variable                    | Purpose                                                                |
-| --------------------------- | ---------------------------------------------------------------------- |
-| `NODE_ENV`                  | `development`, `test`, or `production`.                                |
-| `PORT`                      | HTTP port, default `3000`.                                             |
-| `APP_ORIGIN`                | Allowed CORS origin.                                                   |
-| `DATABASE_URL`              | PostgreSQL connection string.                                          |
-| `SUPABASE_URL`              | Supabase project URL.                                                  |
-| `SUPABASE_ANON_KEY`         | Supabase anonymous key retained for backend environment compatibility. |
-| `SUPABASE_SERVICE_ROLE_KEY` | Backend-only key used for server-side Supabase Auth validation.        |
+| Variable            | Purpose                                                       |
+| ------------------- | ------------------------------------------------------------- |
+| `NODE_ENV`          | `development`, `test`, or `production`.                       |
+| `PORT`              | HTTP port, default `3000`.                                    |
+| `APP_ORIGIN`        | Allowed CORS origin.                                          |
+| `DATABASE_URL`      | PostgreSQL connection string.                                 |
+| `SUPABASE_URL`      | Supabase project URL.                                         |
+| `SUPABASE_ANON_KEY` | Supabase publishable/anon key used for Auth token validation. |
 
-Never expose `SUPABASE_SERVICE_ROLE_KEY` to the browser or commit real credentials.
+The backend does not require a Supabase service-role key. Never commit real credentials.
 
 ## API
 

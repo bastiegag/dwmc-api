@@ -50,6 +50,12 @@ Each domain module under `src/modules/<name>/` owns its route, schema, service, 
 
 Routes stay thin. Do not put financial rules in route handlers or HTTP formatting in repositories.
 
+## Runtime Lifecycle
+
+The server binds to `0.0.0.0` and uses Render's `PORT` value, falling back to
+`3000` locally. It closes the HTTP server and Prisma client on `SIGTERM` and
+`SIGINT`. The process is stateless; persistent data belongs in Supabase.
+
 ## Money Arithmetic
 
 Persisted monetary values use two decimal places. When the API calculates derived balances, it

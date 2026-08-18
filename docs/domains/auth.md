@@ -43,8 +43,11 @@ A successful response has the form:
 
 Authentication proves identity; it does not grant access to another user's records. Services resolve `UserProfile` and repositories filter by its ID. A resource belonging to another user is treated as not found by the resource lookup patterns. Frontend route visibility is not authorization.
 
-## Secrets
+## Supabase Configuration
 
-The backend service-role key is required only by the backend Supabase client. It must never be exposed through frontend variables, API responses, logs, or committed files.
+The backend Supabase client uses `SUPABASE_URL` and the project's
+publishable/anon key (`SUPABASE_ANON_KEY`) for `auth.getUser(token)`. The API
+uses Prisma directly for PostgreSQL access and does not require a
+`SUPABASE_SERVICE_ROLE_KEY`.
 
 Logout is handled by the frontend Supabase client. The backend does not manage browser sessions.

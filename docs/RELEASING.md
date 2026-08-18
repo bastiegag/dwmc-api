@@ -73,15 +73,14 @@ expected. The service does not require a persistent disk.
 
 Set these values in Render. Never commit or print their values:
 
-| Variable                    | Required | Secret | Source   | Notes                                                                                           |
-| --------------------------- | -------- | ------ | -------- | ----------------------------------------------------------------------------------------------- |
-| `NODE_ENV`                  | Yes      | No     | Render   | Set to `production`.                                                                            |
-| `DATABASE_URL`              | Yes      | Yes    | Supabase | PostgreSQL URL for the target Supabase project.                                                 |
-| `SUPABASE_URL`              | Yes      | No     | Supabase | Project URL used by backend Auth validation.                                                    |
-| `SUPABASE_ANON_KEY`         | Yes      | No     | Supabase | Publishable/anon key required by the current env contract; not used for server-side validation. |
-| `SUPABASE_SERVICE_ROLE_KEY` | Yes      | Yes    | Supabase | Backend-only key used by `supabase.auth.getUser`; never expose to Vercel/browser code.          |
-| `APP_ORIGIN`                | Yes      | No     | Vercel   | Exact frontend origin, such as `https://app.example.com`; no trailing path.                     |
-| `PORT`                      | No       | No     | Render   | Render supplies this automatically. Do not configure it manually.                               |
+| Variable            | Required | Secret | Source   | Notes                                                                                |
+| ------------------- | -------- | ------ | -------- | ------------------------------------------------------------------------------------ |
+| `NODE_ENV`          | Yes      | No     | Render   | Set to `production`.                                                                 |
+| `DATABASE_URL`      | Yes      | Yes    | Supabase | PostgreSQL URL for the target Supabase project.                                      |
+| `SUPABASE_URL`      | Yes      | No     | Supabase | Project URL used by backend Auth validation.                                         |
+| `SUPABASE_ANON_KEY` | Yes      | No     | Supabase | Publishable/anon key used by `supabase.auth.getUser`; it is not an admin credential. |
+| `APP_ORIGIN`        | Yes      | No     | Vercel   | Exact frontend origin, such as `https://app.example.com`; no trailing path.          |
+| `PORT`              | No       | No     | Render   | Render supplies this automatically. Do not configure it manually.                    |
 
 GitHub Actions reads `DATABASE_URL` from the protected GitHub `production`
 Environment. See [database](database.md#supabase-production-connection) for

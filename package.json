@@ -4,6 +4,9 @@
     "description": "Personal budget app backend API",
     "private": true,
     "type": "module",
+    "engines": {
+        "node": "24.x"
+    },
     "scripts": {
         "dev": "tsx watch src/server.ts",
         "build": "tsc",

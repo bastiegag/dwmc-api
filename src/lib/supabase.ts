@@ -4,10 +4,8 @@ import { env } from '../config/env.js'
 /**
  * Backend Supabase client.
  *
- * Uses SUPABASE_SERVICE_ROLE_KEY for server-side operations such as validating
- * JWTs with supabase.auth.getUser(token).
- *
- * IMPORTANT: Never expose SUPABASE_SERVICE_ROLE_KEY to the frontend — it
- * bypasses Row Level Security and grants full database access.
+ * Uses the project's publishable/anon key to validate access tokens with
+ * supabase.auth.getUser(token). The backend uses Prisma for database access
+ * and does not need a service-role credential.
  */
-export const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY)
+export const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY)
