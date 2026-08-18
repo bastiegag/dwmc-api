@@ -40,7 +40,9 @@ npm run dev
 
 The development server listens on port `3000` by default. The frontend repository's Vite development server proxies `/api/v1` to this server.
 
-See the package scripts and [releasing](docs/RELEASING.md) for migration and validation guidance.
+See the package scripts and [releasing](docs/RELEASING.md) for migration and
+validation guidance. `main` is the production branch; feature branches target
+it by pull request.
 
 ## Render Deployment
 
@@ -59,11 +61,11 @@ npm ci --include=dev && npm run db:generate && npm run build
 npm start
 ```
 
-Use `/health` as the Render Health Check Path. Run `npm run db:migrate:deploy`
-as a controlled release step against the intended Supabase database before
-deploying code that requires the migration. Migrations are not run by the
-Render start command. The complete release order and smoke-test plan are in
-[releasing](docs/releasing.md).
+Use `/health` as the Render Health Check Path. GitHub Actions automatically
+runs `npm run db:migrate:deploy` against the production Supabase project after
+CI succeeds on `main`; see [releasing](docs/RELEASING.md) for the full
+pipeline, migration failure behavior, and the Render ordering caveat.
+Migrations are never run by the Render start command.
 
 ## Environment Variables
 

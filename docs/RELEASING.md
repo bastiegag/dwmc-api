@@ -2,6 +2,15 @@
 
 `dwmc-api` is versioned independently from `dwmc-web`. The package version, Git tags/GitHub Releases, and public API namespace `/api/v1` are separate concerns.
 
+## Branch Model
+
+`main` is the production branch. Temporary branches (`feature/*`, `fix/*`,
+`chore/*`) target `main` by pull request:
+
+```text
+feature/* -> PR -> main -> CI -> prisma migrate deploy -> Supabase production
+```
+
 ## Quality Gate
 
 The backend validation script runs formatting checks, lint, typecheck, Vitest, and the TypeScript build:
@@ -10,8 +19,9 @@ The backend validation script runs formatting checks, lint, typecheck, Vitest, a
 npm run validate
 ```
 
-The CI workflow runs the equivalent checks on pull requests and pushes to
-`main`. There is currently no release or migration workflow in this repository.
+The `CI` workflow (`.github/workflows/ci.yml`) runs the equivalent checks on
+pull requests targeting `main` and on pushes to `main`. CI never runs a Prisma
+migration command and is database-independent.
 
 ## Production Architecture
 
@@ -44,8 +54,17 @@ Health Check Path: /health
 `npm start` runs the compiled `dist/server.js`. The server uses Render's
 `PORT`, falls back to `3000` locally, binds to `0.0.0.0`, and logs only the
 environment and bound port. Render Git auto-deploy from `main` is the intended
-simple deployment trigger; GitHub Actions remains the quality and controlled
-migration workflow rather than a competing deploy trigger.
+deployment trigger; GitHub Actions never calls the Render API and remains the
+quality and controlled migration workflow rather than a competing deploy
+trigger.
+
+Render's free auto-deploy starts as soon as it observes the new commit, which
+is independent of and not ordered against the GitHub Actions migration job.
+In practice the migration workflow (gated on CI success via `workflow_run`)
+usually completes before or around the same time as a Render Free cold build,
+but this is **not a guaranteed ordering** on the current free architecture.
+Backward-compatible migrations (below) are what actually make this safe, not
+deployment sequencing.
 
 Render Free may spin the service down after inactivity, so cold starts are
 expected. The service does not require a persistent disk.
@@ -64,8 +83,9 @@ Set these values in Render. Never commit or print their values:
 | `APP_ORIGIN`                | Yes      | No     | Vercel   | Exact frontend origin, such as `https://app.example.com`; no trailing path.                     |
 | `PORT`                      | No       | No     | Render   | Render supplies this automatically. Do not configure it manually.                               |
 
-Use separate Supabase projects and separate Render environment values for
-staging and production. Do not reuse production credentials in staging.
+GitHub Actions reads `DATABASE_URL` from the protected GitHub `production`
+Environment. See [database](database.md#supabase-production-connection) for
+the migration connection string mode.
 
 ## CORS
 
@@ -94,44 +114,72 @@ Use `npm run version` to consume changesets and update the package/changelog sta
 
 ## Database Migrations
 
-Schema changes require an approved Prisma migration and regenerated client. Create
-development migrations locally, but apply the committed migration history to a
-production database with `prisma migrate deploy`:
+Schema changes require an approved Prisma migration and regenerated client.
+Migrations are always created during local development and committed to Git;
+GitHub Actions only **applies** committed migrations, it never generates them:
 
 ```bash
-npm run db:migrate
-npm run db:generate
-npm run db:migrate:deploy
+npm run db:migrate     # development only: creates a new migration
+npm run db:generate    # regenerate the Prisma client locally
 ```
 
-The release workflows do not automatically apply production database migrations. Run
-`npm run db:migrate:deploy` only against the intended production `DATABASE_URL`, after
-confirming a current backup and reviewing the SQL. Migration ordering, deployment
-timing, and rollback strategy must be handled by the deployment process that owns the
-target database. Do not use `db:reset`, `prisma migrate reset`, or `prisma migrate dev`
-against production.
+`npm run db:migrate:deploy` (`prisma migrate deploy`) is the production
+command. Never use `prisma migrate dev`, `prisma db push`, or `db:reset` /
+`prisma migrate reset` against production; those are development-only commands.
 
-Render Free does not provide a normal one-off migration job, so use a controlled
-external release step such as a protected GitHub Actions workflow or an operator
-machine with `DATABASE_URL` supplied as a secret. The repository currently has
-no migration automation workflow; do not claim this is automated. Never add
-migrations to the Render Start Command. Code rollback does not automatically
-reverse a Prisma migration, so prefer backward-compatible schema changes.
+### Production Migration Flow
+
+```text
+push to main -> CI (quality) -> deploy-production.yml (environment: production)
+  -> prisma migrate deploy -> Supabase production -> Render production auto-deploy
+```
+
+`.github/workflows/deploy-production.yml` triggers after the `CI` workflow
+completes successfully for `main`, uses `environment: production`, and reads
+the production `DATABASE_URL` secret. Its `concurrency` group ensures only one
+production migration deployment runs at a time; an in-flight migration is
+never cancelled because a newer commit arrived.
+
+If `prisma migrate deploy` fails, the workflow fails and stops; GitHub Actions
+does not reset the database, mark a migration as resolved, retry destructively,
+or perform any further release step. A failed migration requires manual
+investigation before the next push is retried.
+
+Render Free does not provide a normal one-off migration job, so the GitHub
+Actions migration workflow is the controlled external release step. Never
+add migrations to the Render Start Command. Code rollback does not
+automatically reverse a Prisma migration, so prefer backward-compatible schema
+changes (see below).
 
 Recommended order:
 
 ```text
-Development -> CI -> review migration -> prisma migrate deploy -> Render
-deployment -> /health -> /ready -> authenticated API smoke test -> frontend
-verification when its contract changed
+Development -> PR to main -> CI -> merge -> prisma migrate deploy (production)
+  -> Render production deploy -> /health -> /ready -> smoke test
 ```
 
-Supabase, not Render, owns PostgreSQL backup and recovery. The free portfolio
-environment should not imply production-grade backup guarantees.
+Supabase, not Render, owns PostgreSQL backup and recovery.
+The free portfolio environment should not imply production-grade backup
+guarantees.
+
+### Backward-Compatible Migrations
+
+GitHub Actions migration and Render's Git auto-deploy are not atomically
+ordered (see [Render Service](#render-service)), so schema changes should be
+backward-compatible whenever practical:
+
+1. Add the new column as nullable or with a default.
+2. Deploy the backend version that is compatible with both old and new schema.
+3. Backfill data if required.
+4. Switch application code to rely on the new field.
+5. Remove the old column/shape in a later, separate release.
+
+Do not assume that rolling back application code also rolls back an applied
+migration.
 
 ## Smoke Test
 
-Use a staging or dedicated test account and safe test data:
+Use a dedicated test account and safe test data:
 
 1. `GET /health` returns `200` with `{ "data": { "status": "ok" } }`.
 2. `GET /ready` returns `200` when PostgreSQL is reachable and `503` when it is unavailable.
@@ -156,4 +204,5 @@ Before merging a release-worthy change, review:
 - Frontend compatibility in the sibling repository.
 - A Changeset when the behavior or operational impact warrants a release note.
 
-No automated production migration runner is configured in this repository.
+`deploy-production.yml` applies committed migrations automatically after CI
+succeeds on `main`; see [Database Migrations](#database-migrations).

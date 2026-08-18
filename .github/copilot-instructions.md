@@ -17,6 +17,14 @@ Consult documentation in this order before making design decisions:
 
 Also consult [backend testing](../docs/testing.md), [frontend testing](../../dwmc-web/docs/testing.md), and [releasing](../docs/releasing.md) or [frontend releasing](../../dwmc-web/docs/releasing.md) when the change affects those areas. The roadmap is context, not a specification: do not implement planned work without confirmed scope.
 
+## Database Migration Safety
+
+- Never run `prisma migrate dev`, `prisma db push`, or `prisma migrate reset` against production; these are development-only commands.
+- Always commit the Prisma migration together with the matching `schema.prisma` change.
+- GitHub Actions only applies committed migrations to production using `prisma migrate deploy`; it never generates migrations.
+- Production uses a protected `DATABASE_URL` secret in the GitHub `production` Environment; never hardcode or print credentials.
+- A failed migration must stop release progression; never resolve, reset, or retry destructively to work around it.
+
 ## Development Expectations
 
 - Inspect the nearest existing module, route, service, repository, schema, and tests before adding a pattern.

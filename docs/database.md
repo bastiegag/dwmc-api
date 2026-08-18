@@ -29,7 +29,32 @@ Account `currentBalance`, budget `spent`, `remaining`, `progress`, and summary t
 
 ## Migrations
 
-Migration history lives under `prisma/migrations`. Use `npm run db:migrate` for development migrations and `npm run db:generate` after schema changes. Production migration execution is not automated by the release workflow; deployment operators must apply an approved migration using the environment's database process.
+Migration history lives under `prisma/migrations` and is committed to Git; it is the
+single source of truth applied to every environment. Use `npm run db:migrate`
+(`prisma migrate dev`) for development-only migration creation and `npm run
+db:generate` after schema changes. `prisma migrate dev`, `prisma db push`, and
+`prisma migrate reset` is a development-only command and must never run against
+production.
+
+GitHub Actions applies committed migrations to production with
+`npm run db:migrate:deploy` (`prisma migrate deploy`) after CI succeeds; see
+[releasing](RELEASING.md#database-migrations) for the workflow. GitHub Actions
+never generates a migration; it only applies migrations already committed to
+`prisma/migrations`.
+
+## Supabase Database
+
+The production Supabase PostgreSQL database has its own application tables and
+`_prisma_migrations` tracking table:
+
+```text
+Supabase Production
+├── application tables
+└── _prisma_migrations
+```
+
+The database applies the committed Prisma migration history independently.
+Application data is not copied or synchronized by CI/CD.
 
 ## Supabase Production Connection
 
@@ -42,6 +67,9 @@ Supavisor session-pooler connection is compatible with this Prisma setup; use
 the mode tested for the target Supabase project and do not use a transaction
 pooler URL for Prisma migrations. Keep any migration/direct URL handling in the
 database release process rather than committing credentials here.
+
+The GitHub `production` Environment exposes the `DATABASE_URL` secret used by
+the production migration workflow.
 
 Supabase owns PostgreSQL backups and recovery. Render does not provide a backup
 of application data, and this API does not write persistent state to Render's

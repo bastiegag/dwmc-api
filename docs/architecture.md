@@ -17,6 +17,25 @@ HTTP request
 
 `src/app.ts` registers middleware, public health/readiness endpoints, error handling, and the `/api/v1` routers. `src/server.ts` starts the Node.js HTTP server.
 
+## Production Infrastructure Boundary
+
+The production environment is the only deployed environment currently
+configured for this repository:
+
+| Concern    | Production                     |
+| ---------- | ------------------------------ |
+| Git branch | `main`                         |
+| Backend    | Render production Web Service  |
+| Database   | Supabase production PostgreSQL |
+| Frontend   | Vercel production deployment   |
+
+CI (`.github/workflows/ci.yml`) validates pull requests targeting `main` and
+pushes to `main`; it never touches a database. The production migration
+workflow (`.github/workflows/deploy-production.yml`) applies committed
+migrations only after CI succeeds, using the GitHub `production` Environment
+to select the `DATABASE_URL` secret. See [releasing](RELEASING.md) for the
+full pipeline and [database](database.md#migrations) for migration ownership.
+
 ## Module Boundaries
 
 Each domain module under `src/modules/<name>/` owns its route, schema, service, and repository files where those layers are needed.
