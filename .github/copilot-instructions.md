@@ -15,7 +15,7 @@ Consult documentation in this order before making design decisions:
 5. ADRs, when present, for decisions that constrain the implementation.
 6. The relevant [README](../README.md) and package scripts for setup, commands, and repository orientation.
 
-Also consult [backend testing](../docs/testing.md), [frontend testing](../../dwmc-web/docs/testing.md), and [releasing](../docs/releasing.md) or [frontend releasing](../../dwmc-web/docs/releasing.md) when the change affects those areas. The roadmap is context, not a specification: do not implement planned work without confirmed scope.
+Also consult [backend testing](../docs/testing.md), [frontend testing](../../dwmc-web/docs/testing.md), and [releasing](../docs/RELEASING.md) or [frontend releasing](../../dwmc-web/docs/releasing.md) when the change affects those areas. The roadmap is context, not a specification: do not implement planned work without confirmed scope.
 
 ## Database Migration Safety
 

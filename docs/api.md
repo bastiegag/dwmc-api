@@ -32,6 +32,10 @@ Errors:
 
 `issues` is optional. Current error codes map to `401` unauthorized, `403` forbidden, `404` not found, `422` validation error, `409` conflict, and `500` internal error. Some explicit domain validation checks use `400`; the route/service source and tests are authoritative for individual cases.
 
+Requests are limited to 1 MiB at the application boundary and receive standard
+security response headers. The API emits an `X-Request-ID` response header and
+includes the same request ID in structured request logs.
+
 ## Endpoint Inventory
 
 | Method           | Path                       | Access        | Result                                        |

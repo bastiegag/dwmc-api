@@ -4,6 +4,8 @@
 
 ```text
 HTTP request
+-> request body limit
+-> security headers
 -> CORS middleware
 -> request logger
 -> route match
@@ -16,6 +18,12 @@ HTTP request
 ```
 
 `src/app.ts` registers middleware, public health/readiness endpoints, error handling, and the `/api/v1` routers. `src/server.ts` starts the Node.js HTTP server.
+
+The application supports local development and production. There is one
+production backend and no dedicated staging environment. The API rejects
+request bodies larger than 1 MiB with `413` and adds standard security headers
+before route handling. Request logs include a request ID, method, path, status,
+and duration; startup logs report the environment and bound port.
 
 ## Production Infrastructure Boundary
 

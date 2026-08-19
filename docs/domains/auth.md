@@ -22,6 +22,10 @@ The frontend integration is documented in `dwmc-web/docs/api.md` in the sibling 
 4. Returns `401 UNAUTHORIZED` when the header or token is missing, malformed, invalid, or expired.
 5. Stores `{ id, email }` as `authUser` in the Hono context.
 
+Token signature, expiration, and Supabase identity validation are delegated to
+the Supabase Auth SDK through `getUser`; this backend does not implement a
+separate JWKS endpoint or local JWT key-management layer.
+
 All protected resource routes apply this middleware.
 
 ## Profile Synchronization

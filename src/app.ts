@@ -1,5 +1,7 @@
 import { Hono } from 'hono'
+import { bodyLimit } from 'hono/body-limit'
 import { cors } from 'hono/cors'
+import { secureHeaders } from 'hono/secure-headers'
 import type { AppBindings } from './types/app.js'
 import { env } from './config/env.js'
 import { requestLogger } from './shared/logger/request-logger.js'
@@ -19,6 +21,14 @@ const app = new Hono<AppBindings>()
 
 // ── Middleware ──────────────────────────────────────────────────────────────
 
+app.use(
+    '*',
+    bodyLimit({
+        maxSize: 1024 * 1024,
+        onError: (c) => c.json(errorResponse('VALIDATION_ERROR', 'Request body too large'), 413),
+    }),
+)
+app.use('*', secureHeaders())
 app.use(
     '*',
     cors({

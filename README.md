@@ -42,7 +42,8 @@ The development server listens on port `3000` by default. The frontend repositor
 
 See the package scripts and [releasing](docs/RELEASING.md) for migration and
 validation guidance. `main` is the production branch; feature branches target
-it by pull request.
+it by pull request. The supported environments are local development and
+production; there is no dedicated staging environment.
 
 ## Render Deployment
 
@@ -134,4 +135,4 @@ npm run build
 - [Categories and sections](docs/domains/categories.md)
 - [Monthly summary](docs/domains/summary.md)
 - [Transactions](docs/domains/transactions.md)
-- [Releasing](docs/releasing.md)
+- [Releasing](docs/RELEASING.md)

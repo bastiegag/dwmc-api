@@ -52,8 +52,9 @@ Health Check Path: /health
 ```
 
 `npm start` runs the compiled `dist/server.js`. The server uses Render's
-`PORT`, falls back to `3000` locally, binds to `0.0.0.0`, and logs only the
-environment and bound port. Render Git auto-deploy from `main` is the intended
+`PORT`, falls back to `3000` locally, and binds to `0.0.0.0`. Startup logs
+report the environment and bound port; request logs include request ID, method,
+path, status, and duration. Render Git auto-deploy from `main` is the intended
 deployment trigger; GitHub Actions never calls the Render API and remains the
 quality and controlled migration workflow rather than a competing deploy
 trigger.
@@ -96,6 +97,10 @@ localhost origin in `.env`; production must use the Vercel production origin.
 Preview Vercel origins are not automatically allowed. If preview access is
 needed, introduce an explicit allowlist or deliberate origin matcher; do not
 switch production CORS to a wildcard.
+
+The API rejects request bodies larger than 1 MiB with `413` and adds standard
+security response headers, including `X-Content-Type-Options` and
+`X-Frame-Options`. These protections are applied before route handling.
 
 ## Changesets and GitHub Actions
 
@@ -157,9 +162,11 @@ Development -> PR to main -> CI -> merge -> prisma migrate deploy (production)
   -> Render production deploy -> /health -> /ready -> smoke test
 ```
 
-Supabase, not Render, owns PostgreSQL backup and recovery.
-The free portfolio environment should not imply production-grade backup
-guarantees.
+Supabase, not Render, owns PostgreSQL backup and recovery. The repository does
+not verify the current Supabase plan, backup retention, point-in-time recovery,
+or restore-test status, so those capabilities must be confirmed in the
+Supabase dashboard before relying on them. The free portfolio environment
+should not imply production-grade backup guarantees.
 
 ### Backward-Compatible Migrations
 

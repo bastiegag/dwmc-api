@@ -71,6 +71,8 @@ database release process rather than committing credentials here.
 The GitHub `production` Environment exposes the `DATABASE_URL` secret used by
 the production migration workflow.
 
-Supabase owns PostgreSQL backups and recovery. Render does not provide a backup
-of application data, and this API does not write persistent state to Render's
-filesystem.
+Supabase owns PostgreSQL backups and recovery. This repository does not verify
+the current plan's retention, point-in-time recovery, or restore-test status;
+those are operational checks in the Supabase dashboard. Render does not
+provide a backup of application data, and this API does not write persistent
+state to Render's filesystem.
