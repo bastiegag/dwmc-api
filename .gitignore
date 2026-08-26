@@ -8,6 +8,7 @@ dist/
 .env
 .env.local
 *.local
+!.env.example
 
 # IDE / OS artifacts
 .DS_Store

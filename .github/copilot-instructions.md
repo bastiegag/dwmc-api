@@ -19,11 +19,10 @@ Also consult [backend testing](../docs/testing.md), [frontend testing](../../dwm
 
 ## Database Migration Safety
 
-- Never run `prisma migrate dev`, `prisma db push`, or `prisma migrate reset` against production; these are development-only commands.
+- Use `prisma migrate dev`, `prisma db push`, and `prisma migrate reset` only for local development.
 - Always commit the Prisma migration together with the matching `schema.prisma` change.
-- GitHub Actions only applies committed migrations to production using `prisma migrate deploy`; it never generates migrations.
-- Production uses a protected `DATABASE_URL` secret in the GitHub `production` Environment; never hardcode or print credentials.
-- A failed migration must stop release progression; never resolve, reset, or retry destructively to work around it.
+- GitHub Actions validates code only; migrations are created and applied locally.
+- `DATABASE_URL` is local PostgreSQL configuration; never hardcode or print credentials.
 
 ## Development Expectations
 
