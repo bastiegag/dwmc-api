@@ -20,15 +20,34 @@ Supabase is used for authentication only. `UserProfile.authUserId` links the aut
 
 ## Setup
 
+Run these steps from a fresh clone. Supabase is used for Auth only; application
+data stays in the local PostgreSQL database started by Docker Compose.
+
 ```bash
 npm ci
 cp .env.example .env
-# Set the local DATABASE_URL and Supabase Auth values.
 docker compose up -d
 npm run db:generate
 npm run db:migrate
 npm run dev
 ```
+
+Before starting the API, set these values in `.env`:
+
+```dotenv
+NODE_ENV=development
+PORT=3000
+APP_ORIGIN=http://localhost:5182
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/dwmc_api?schema=public
+SUPABASE_URL=https://<project-ref>.supabase.co
+SUPABASE_ANON_KEY=<publishable-anon-key>
+```
+
+Create a Supabase project with Email provider authentication enabled. In the
+Supabase dashboard, add `http://localhost:5182/**` to the Auth redirect URLs so
+email confirmation and password recovery can return to the local frontend.
+The project URL and publishable anon key are available in the project's API
+settings. Never commit `.env` or use a service-role key in this application.
 
 The API listens on `http://localhost:3000`. Public endpoints are `GET /health`
 and `GET /ready`; authenticated resources are under `/api/v1`.
@@ -56,6 +75,11 @@ npm run db:seed
 `npm run db:migrate` creates and applies local development migrations. Commit
 schema changes and migrations together. Tests mock Prisma and Supabase, so the
 normal test suite does not require live credentials or a running database.
+
+To reset local application data, run `npm run db:reset`; this is destructive.
+The optional `npm run db:seed` command creates development records and is not
+required for a first run. `npm run db:studio` opens Prisma Studio for the local
+database.
 
 ## Documentation
 
