@@ -2,6 +2,16 @@
 
 `dwmc-api` is the local Hono/TypeScript backend for DWMC, a personal budgeting application. It validates Supabase Auth access tokens, enforces ownership, and persists domain data with Prisma in local PostgreSQL.
 
+The companion frontend is [`dwmc-web`](https://github.com/bastiegag/dwmc-web). The web application owns presentation, routing, forms, and API consumption; this repository owns domain rules, authorization, financial data, persistence, and the HTTP contract.
+
+## Responsibilities
+
+- Authenticate requests with Supabase access tokens and resolve the local user profile.
+- Validate request payloads and enforce ownership at the API boundary.
+- Apply account, category, transaction, budget, profile, and monthly-summary rules.
+- Persist application data through Prisma and local PostgreSQL.
+- Expose stable response envelopes, pagination, archive behavior, money handling, and error semantics.
+
 ## Architecture
 
 ```text
@@ -10,6 +20,12 @@ Browser -> dwmc-web (local) -> dwmc-api (local) -> Prisma -> PostgreSQL (local)
 ```
 
 Supabase is used for authentication only. `UserProfile.authUserId` links the authenticated Supabase user to local application records. The API never uses Supabase PostgreSQL for domain data.
+
+## Stack
+
+Hono, TypeScript, Zod, Prisma, PostgreSQL, Supabase Auth, Vitest, ESLint, and
+Prettier. The service is designed for local development in the current V1
+workflow; Docker Compose supplies PostgreSQL.
 
 ## Prerequisites
 
@@ -76,6 +92,10 @@ npm run db:seed
 schema changes and migrations together. Tests mock Prisma and Supabase, so the
 normal test suite does not require live credentials or a running database.
 
+`npm run validate` covers formatting, linting, typechecking, tests, and the
+production build. The active CI workflow runs the same quality gates for this
+repository.
+
 To reset local application data, run `npm run db:reset`; this is destructive.
 The optional `npm run db:seed` command creates development records and is not
 required for a first run. `npm run db:studio` opens Prisma Studio for the local
@@ -90,3 +110,8 @@ database.
 - [Testing](docs/testing.md)
 - [Development and releases](docs/RELEASING.md)
 - [Domain documentation](docs/domains/)
+- [Frontend repository](https://github.com/bastiegag/dwmc-web)
+
+## License
+
+MIT. See [LICENSE](LICENSE).
