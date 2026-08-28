@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { Hono } from 'hono'
 import { AppError } from '../shared/errors/AppError.js'
 import { handleError } from '../shared/errors/error-handler.js'
@@ -45,6 +45,7 @@ describe('handleError', () => {
 
     it('returns 500 INTERNAL_SERVER_ERROR for unknown errors', async () => {
         const app = buildApp()
+        const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
         app.get('/test', () => {
             throw new Error('Unexpected crash')
         })
@@ -54,5 +55,7 @@ describe('handleError', () => {
         const body: any = await res.json()
         expect(body.error.code).toBe('INTERNAL_SERVER_ERROR')
         expect(body.error.message).toBe('An unexpected error occurred')
+        expect(errorSpy).toHaveBeenCalledWith('Unhandled error:', expect.any(Error))
+        errorSpy.mockRestore()
     })
 })

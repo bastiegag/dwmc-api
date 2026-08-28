@@ -27,9 +27,3 @@ Prisma owns the local PostgreSQL schema. Edit `prisma/schema.prisma`, run
 `npm run db:migrate` to create and apply a development migration, regenerate the
 client with `npm run db:generate`, and commit both the schema change and migration.
 Committed migrations are not applied automatically by CI.
-
-## Releases
-
-Versioning and release notes use the repository's normal changeset and Git
-workflow. Production deployment and hosted PostgreSQL are future work and have
-no configuration or instructions in this V1.

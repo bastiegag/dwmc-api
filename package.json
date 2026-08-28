@@ -22,9 +22,6 @@
         "test:watch": "vitest",
         "test:coverage": "vitest run --coverage",
         "validate": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build",
-        "changeset": "changeset",
-        "version": "changeset version",
-        "release": "changeset tag",
         "db:generate": "prisma generate",
         "db:migrate": "prisma migrate dev",
         "db:studio": "prisma studio",
@@ -41,8 +38,6 @@
         "zod": "^4.4.3"
     },
     "devDependencies": {
-        "@changesets/changelog-github": "^0.7.0",
-        "@changesets/cli": "^2.28.1",
         "@commitlint/cli": "^19.6.1",
         "@commitlint/config-conventional": "^19.6.1",
         "@types/node": "^22.10.1",
