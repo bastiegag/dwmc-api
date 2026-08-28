@@ -10,20 +10,19 @@ Consult documentation in this order before making design decisions:
 
 1. [Developer Playbook](../../dwmc-web/docs/dev-playbook.md) for shared development principles and feature workflow.
 2. [Engineering Audit Playbook](../../dwmc-web/docs/engineering-audit-playbook.md) for review scope, severity, and closure criteria.
-3. [Backend Architecture](../docs/architecture.md) and [frontend architecture](../../dwmc-web/docs/architecture.md) for responsibilities and boundaries.
+3. [Backend Architecture](../docs/architecture.md) and [frontend architecture](../../dwmc-web/docs/frontend-architecture.md) for responsibilities and boundaries.
 4. [API design](../docs/api.md), [database](../docs/database.md), [authentication](../docs/domains/auth.md), and the relevant [domain document](../docs/domains/) for contracts and business rules.
 5. ADRs, when present, for decisions that constrain the implementation.
 6. The relevant [README](../README.md) and package scripts for setup, commands, and repository orientation.
 
-Also consult [backend testing](../docs/testing.md), [frontend testing](../../dwmc-web/docs/testing.md), and [releasing](../docs/RELEASING.md) or [frontend releasing](../../dwmc-web/docs/releasing.md) when the change affects those areas. The roadmap is context, not a specification: do not implement planned work without confirmed scope.
+Also consult [backend testing](../docs/testing.md), [frontend testing](../../dwmc-web/docs/testing.md), and [releasing](../docs/RELEASING.md) or [frontend releasing](../../dwmc-web/docs/RELEASING.md) when the change affects those areas. The roadmap is context, not a specification: do not implement planned work without confirmed scope.
 
 ## Database Migration Safety
 
-- Never run `prisma migrate dev`, `prisma db push`, or `prisma migrate reset` against production; these are development-only commands.
+- Use `prisma migrate dev`, `prisma db push`, and `prisma migrate reset` only for local development.
 - Always commit the Prisma migration together with the matching `schema.prisma` change.
-- GitHub Actions only applies committed migrations to production using `prisma migrate deploy`; it never generates migrations.
-- Production uses a protected `DATABASE_URL` secret in the GitHub `production` Environment; never hardcode or print credentials.
-- A failed migration must stop release progression; never resolve, reset, or retry destructively to work around it.
+- GitHub Actions validates code only; migrations are created and applied locally.
+- `DATABASE_URL` is local PostgreSQL configuration; never hardcode or print credentials.
 
 ## Development Expectations
 

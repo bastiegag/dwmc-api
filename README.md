@@ -1,127 +1,85 @@
 # Dude, Where's My Cash? API
 
-`dwmc-api` is the Hono/TypeScript backend for Dude, Where's My Cash?, a personal budgeting application. It validates Supabase access tokens, applies user ownership rules, persists domain data with Prisma/PostgreSQL, and calculates account, budget, and monthly-summary values.
-
-## Stack
-
-The versions and scripts are maintained in [`package.json`](package.json). The backend uses Node.js, TypeScript, Hono, Prisma, PostgreSQL, Zod, Supabase Auth, Vitest, ESLint, Prettier, Husky, and Changesets.
+`dwmc-api` is the local Hono/TypeScript backend for DWMC, a personal budgeting application. It validates Supabase Auth access tokens, enforces ownership, and persists domain data with Prisma in local PostgreSQL.
 
 ## Architecture
 
-The request path is:
-
 ```text
-Hono route
--> Zod parsing
--> auth middleware where required
--> service business rules
--> repository Prisma query
--> response helper
+Browser -> dwmc-web (local) -> dwmc-api (local) -> Prisma -> PostgreSQL (local)
+                \-> Supabase Auth (remote) -> access token -> dwmc-api
 ```
 
-See [architecture](docs/architecture.md) and [database](docs/database.md).
+Supabase is used for authentication only. `UserProfile.authUserId` links the authenticated Supabase user to local application records. The API never uses Supabase PostgreSQL for domain data.
 
-## Getting Started
+## Prerequisites
 
-Prerequisites:
+- Node.js 24.x
+- npm
+- Docker and Docker Compose for local PostgreSQL
+- A Supabase project with Auth enabled
 
-- Node.js 24.x.
-- Docker and Docker Compose for local PostgreSQL.
-- A Supabase project.
+## Setup
+
+Run these steps from a fresh clone. Supabase is used for Auth only; application
+data stays in the local PostgreSQL database started by Docker Compose.
 
 ```bash
-npm install
+npm ci
 cp .env.example .env
-# Fill in the required Supabase and database values.
 docker compose up -d
+npm run db:generate
 npm run db:migrate
 npm run dev
 ```
 
-The development server listens on port `3000` by default. The frontend repository's Vite development server proxies `/api/v1` to this server.
+Before starting the API, set these values in `.env`:
 
-See the package scripts and [releasing](docs/RELEASING.md) for migration and
-validation guidance. `main` is the production branch; feature branches target
-it by pull request. The supported environments are local development and
-production; there is no dedicated staging environment.
-
-## Render Deployment
-
-The production API is intended to run as a stateless Render Free Web Service.
-Render hosts the Node.js process, Supabase hosts PostgreSQL, and Supabase Auth
-continues to issue and validate browser access tokens. Configure `APP_ORIGIN`
-with the exact Vercel production origin; do not use `*` in production.
-
-Use these Render commands:
-
-```bash
-# Build Command
-npm ci --include=dev && npm run db:generate && npm run build
-
-# Start Command
-npm start
+```dotenv
+NODE_ENV=development
+PORT=3000
+APP_ORIGIN=http://localhost:5182
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/dwmc_api?schema=public
+SUPABASE_URL=https://<project-ref>.supabase.co
+SUPABASE_ANON_KEY=<publishable-anon-key>
 ```
 
-Use `/health` as the Render Health Check Path. GitHub Actions automatically
-runs `npm run db:migrate:deploy` against the production Supabase project after
-CI succeeds on `main`; see [releasing](docs/RELEASING.md) for the full
-pipeline, migration failure behavior, and the Render ordering caveat.
-Migrations are never run by the Render start command.
+Create a Supabase project with Email provider authentication enabled. In the
+Supabase dashboard, add `http://localhost:5182/**` to the Auth redirect URLs so
+email confirmation and password recovery can return to the local frontend.
+The project URL and publishable anon key are available in the project's API
+settings. Never commit `.env` or use a service-role key in this application.
 
-## Environment Variables
+The API listens on `http://localhost:3000`. Public endpoints are `GET /health`
+and `GET /ready`; authenticated resources are under `/api/v1`.
 
-The validated backend variables are:
+## Environment
 
-| Variable            | Purpose                                                       |
-| ------------------- | ------------------------------------------------------------- |
-| `NODE_ENV`          | `development`, `test`, or `production`.                       |
-| `PORT`              | HTTP port, default `3000`.                                    |
-| `APP_ORIGIN`        | Allowed CORS origin.                                          |
-| `DATABASE_URL`      | PostgreSQL connection string.                                 |
-| `SUPABASE_URL`      | Supabase project URL.                                         |
-| `SUPABASE_ANON_KEY` | Supabase publishable/anon key used for Auth token validation. |
+Required variables are `NODE_ENV`, `PORT`, `APP_ORIGIN`, `DATABASE_URL`,
+`SUPABASE_URL`, and `SUPABASE_ANON_KEY`. The example file contains placeholders
+only. The backend uses the publishable Supabase anon key with `supabase.auth.getUser`
+and does not require a service-role key.
 
-The backend does not require a Supabase service-role key. Never commit real credentials.
-
-## API
-
-The public API namespace is `/api/v1`. Public endpoints are `GET /health` and `GET /ready`. Authenticated resources are auth profile bootstrap, sections, categories, accounts, transactions, monthly summary, and budgets. Authentication behavior is documented in [domains/auth.md](docs/domains/auth.md).
-
-See [API design](docs/api.md) for the endpoint inventory and response contract. The frontend consumption pattern is documented in `dwmc-web/docs/api.md` in the sibling repository.
-
-## Database
-
-The Prisma schema contains `UserProfile`, `Section`, `Category`, `Account`, `Transaction`, and `Budget`. All business records are scoped to `UserProfile`. See [database](docs/database.md).
-
-## Testing
-
-Tests use Vitest with mocked Prisma and Supabase dependencies, so the normal test suite does not require a live database or real credentials. See [testing](docs/testing.md).
+## Commands
 
 ```bash
+npm run dev
+npm run validate
 npm run test
-npm run typecheck
-npm run lint
-npm run build
+npm run db:generate
+npm run db:migrate
+npm run db:studio
+npm run db:reset
+npm run db:seed
 ```
 
-## Scripts
+`npm run db:migrate` creates and applies local development migrations. Commit
+schema changes and migrations together. Tests mock Prisma and Supabase, so the
+normal test suite does not require live credentials or a running database.
 
-| Command                     | Purpose                                            |
-| --------------------------- | -------------------------------------------------- |
-| `npm run dev`               | Start the watch-mode server.                       |
-| `npm run build`             | Compile TypeScript to `dist`.                      |
-| `npm start`                 | Run the compiled server.                           |
-| `npm run typecheck`         | Type-check without emitting.                       |
-| `npm run lint`              | Run ESLint with zero warnings.                     |
-| `npm run format:check`      | Check Prettier formatting.                         |
-| `npm run test`              | Run Vitest once.                                   |
-| `npm run validate`          | Run formatting, lint, typecheck, tests, and build. |
-| `npm run db:generate`       | Generate the Prisma client.                        |
-| `npm run db:migrate`        | Run Prisma development migrations.                 |
-| `npm run db:migrate:deploy` | Apply committed migrations in production.          |
-| `npm run db:studio`         | Open Prisma Studio.                                |
-| `npm run db:reset`          | Reset the database and rerun migrations.           |
-| `npm run db:seed`           | Run the development seed script.                   |
+To reset local application data, run `npm run db:reset`; this is destructive.
+The optional `npm run db:seed` command creates development records and is not
+required for a first run. `npm run db:studio` opens Prisma Studio for the local
+database.
 
 ## Documentation
 
@@ -130,9 +88,5 @@ npm run build
 - [Authentication](docs/domains/auth.md)
 - [Database](docs/database.md)
 - [Testing](docs/testing.md)
-- [Accounts](docs/domains/accounts.md)
-- [Budgets](docs/domains/budgets.md)
-- [Categories and sections](docs/domains/categories.md)
-- [Monthly summary](docs/domains/summary.md)
-- [Transactions](docs/domains/transactions.md)
-- [Releasing](docs/RELEASING.md)
+- [Development and releases](docs/RELEASING.md)
+- [Domain documentation](docs/domains/)

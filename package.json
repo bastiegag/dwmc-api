@@ -3,6 +3,7 @@
     "version": "0.1.0",
     "description": "Personal budget app backend API",
     "private": true,
+    "license": "MIT",
     "type": "module",
     "engines": {
         "node": "24.x"
@@ -26,7 +27,6 @@
         "release": "changeset tag",
         "db:generate": "prisma generate",
         "db:migrate": "prisma migrate dev",
-        "db:migrate:deploy": "prisma migrate deploy",
         "db:studio": "prisma studio",
         "db:reset": "prisma migrate reset",
         "db:seed": "tsx prisma/seed.ts",

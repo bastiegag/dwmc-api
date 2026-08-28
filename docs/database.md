@@ -2,77 +2,41 @@
 
 ## Provider and Ownership
 
-The application uses PostgreSQL through Prisma. `UserProfile` is the local identity record linked to a Supabase Auth user by unique `authUserId`. Every business model references `UserProfile.id`, and services/repositories scope access to that profile.
+The application uses local PostgreSQL through Prisma. `DATABASE_URL` is the
+Prisma connection string for that local database. Supabase Auth is separate:
+`UserProfile.authUserId` uniquely links a local profile to a Supabase Auth user.
+Every business model is scoped to `UserProfile.id`.
 
 ## Models
 
-- **UserProfile**: local profile data, preferred currency, locale, and ownership relations. `authUserId` is unique and is the only link to the Supabase Auth identity.
-- **Section**: user-owned grouping with a name, color, and archive flag.
-- **Category**: user-owned child of a section with a name, icon, and archive flag.
-- **Account**: user-owned account with type, Decimal starting balance/goal, color, icon, and archive flag.
-- **Transaction**: typed movement with Decimal amount, date, optional account/category relations, transfer source/target relations, and archive flag.
-- **Budget**: user-owned category budget with `YYYY-MM` month, Decimal amount, and archive flag.
+The schema contains `UserProfile`, `Section`, `Category`, `Account`,
+`Transaction`, and `Budget`. Relationships, indexes, constraints, archive
+behavior, and Decimal fields are authoritative in `prisma/schema.prisma`.
 
-## Constraints and Indexes
+## Local Setup
 
-Sections are unique per user/name. Categories are unique per user/section/name. Accounts are unique per user/name. Budgets are unique per user/category/month. Foreign keys use cascading deletes from ownership and section/category relationships as defined in `prisma/schema.prisma`.
-
-User, relation, date, type, and month fields have indexes where the current schema requires list, lookup, or calculation performance. The schema is authoritative for the exact index set.
-
-## Archive Behavior
-
-The application uses soft archive flags instead of ordinary hard deletes. List queries normally exclude archived records and can expose them only where the route schema supports `includeArchived`. Archiving a section also archives its child categories in the service layer.
-
-## Financial Persistence
-
-Account `currentBalance`, budget `spent`, `remaining`, `progress`, and summary totals are computed values, not stored columns. Account and budget amounts use Prisma Decimal in storage and are serialized as JSON numbers by services. Transaction type determines which relations and calculations apply; see [transactions](domains/transactions.md), [accounts](domains/accounts.md), and [budgets](domains/budgets.md).
-
-## Migrations
-
-Migration history lives under `prisma/migrations` and is committed to Git; it is the
-single source of truth applied to every environment. Use `npm run db:migrate`
-(`prisma migrate dev`) for development-only migration creation and `npm run
-db:generate` after schema changes. `prisma migrate dev`, `prisma db push`, and
-`prisma migrate reset` is a development-only command and must never run against
-production.
-
-GitHub Actions applies committed migrations to production with
-`npm run db:migrate:deploy` (`prisma migrate deploy`) after CI succeeds; see
-[releasing](RELEASING.md#database-migrations) for the workflow. GitHub Actions
-never generates a migration; it only applies migrations already committed to
-`prisma/migrations`.
-
-## Supabase Database
-
-The production Supabase PostgreSQL database has its own application tables and
-`_prisma_migrations` tracking table:
+Docker Compose starts PostgreSQL with the development database `dwmc_api`, user
+`postgres`, password `postgres`, and port `5432`. A matching example URL is:
 
 ```text
-Supabase Production
-├── application tables
-└── _prisma_migrations
+postgresql://postgres:postgres@localhost:5432/dwmc_api?schema=public
 ```
 
-The database applies the committed Prisma migration history independently.
-Application data is not copied or synchronized by CI/CD.
+Do not put real credentials in committed files. You may use another local
+PostgreSQL installation by changing `DATABASE_URL` in `.env`.
 
-## Supabase Production Connection
+## Migration Workflow
 
-The Prisma datasource remains `provider = "postgresql"` and reads
-`DATABASE_URL` only from the environment. The repository's local example uses
-the direct Docker PostgreSQL service; no production Supabase connection string
-or connection mode is committed. Render must receive the selected Supabase
-PostgreSQL URL for the target project. A Supabase direct connection or
-Supavisor session-pooler connection is compatible with this Prisma setup; use
-the mode tested for the target Supabase project and do not use a transaction
-pooler URL for Prisma migrations. Keep any migration/direct URL handling in the
-database release process rather than committing credentials here.
+Migration history is committed under `prisma/migrations`.
 
-The GitHub `production` Environment exposes the `DATABASE_URL` secret used by
-the production migration workflow.
+```bash
+npm run db:generate
+npm run db:migrate       # create/apply a local development migration
+npm run db:studio
+npm run db:reset         # destructive local reset
+npm run db:seed
+```
 
-Supabase owns PostgreSQL backups and recovery. This repository does not verify
-the current plan's retention, point-in-time recovery, or restore-test status;
-those are operational checks in the Supabase dashboard. Render does not
-provide a backup of application data, and this API does not write persistent
-state to Render's filesystem.
+Edit the schema, run `npm run db:migrate`, regenerate the client when needed,
+and commit the schema and migration together. CI validates code but does not
+connect to a database or apply migrations remotely.
