@@ -1,5 +1,12 @@
 # Dude, Where's My Cash? API
 
+![TypeScript](https://img.shields.io/badge/TypeScript-5.7.2-3178C6?logo=typescript&logoColor=white)
+![Hono](https://img.shields.io/badge/Hono-4.6.14-E36002?logo=hono&logoColor=white)
+![Prisma](https://img.shields.io/badge/Prisma-5.22.0-2D3748?logo=prisma&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-4169E1?logo=postgresql&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-2.107.0-3FCF8E?logo=supabase&logoColor=white)
+![Vitest](https://img.shields.io/badge/Vitest-4.1.7-6E9F18?logo=vitest&logoColor=white)
+
 `dwmc-api` is the local Hono/TypeScript backend for DWMC, a personal budgeting application. It validates Supabase Auth access tokens, enforces ownership, and persists domain data with Prisma in local PostgreSQL.
 
 The companion frontend is [`dwmc-web`](https://github.com/bastiegag/dwmc-web). The web application owns presentation, routing, forms, and API consumption; this repository owns domain rules, authorization, financial data, persistence, and the HTTP contract.
