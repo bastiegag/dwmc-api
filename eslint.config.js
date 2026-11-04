@@ -5,7 +5,7 @@ export default tseslint.config(
     ...tseslint.configs.recommended,
     eslintConfigPrettier,
     {
-        ignores: ['dist/**', 'node_modules/**', 'prisma/**', 'docs/**'],
+        ignores: ['coverage/**', 'dist/**', 'node_modules/**', 'prisma/**', 'docs/**'],
     },
     {
         rules: {

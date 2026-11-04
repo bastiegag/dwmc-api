@@ -11,7 +11,7 @@ Consult documentation in this order before making design decisions:
 1. [Developer Playbook](../../dwmc-web/docs/dev-playbook.md) for shared development principles and feature workflow.
 2. [Engineering Audit Playbook](../../dwmc-web/docs/engineering-audit-playbook.md) for review scope, severity, and closure criteria.
 3. [Backend Architecture](../docs/architecture.md) and [frontend architecture](../../dwmc-web/docs/frontend-architecture.md) for responsibilities and boundaries.
-4. [API design](../docs/api.md), [database](../docs/database.md), [authentication](../docs/domains/auth.md), and the relevant [domain document](../docs/domains/) for contracts and business rules.
+4. [API design](../docs/api.md), [database](../docs/database.md), and [architecture](../docs/architecture.md) for contracts and business rules.
 5. ADRs, when present, for decisions that constrain the implementation.
 6. The relevant [README](../README.md) and package scripts for setup, commands, and repository orientation.
 
@@ -51,7 +51,7 @@ Preserve backend ownership and authorization boundaries. Keep financial calculat
 
 ## Feature Development
 
-For a new feature, consult the Developer Playbook, relevant backend and frontend architecture, the API/database/auth/domain documentation, and the testing guidance. Implement backend and frontend contract changes together when needed, then update tests and affected documentation. Verify ownership isolation, validation, archive behavior, month boundaries, money calculations, and response envelopes.
+For a new feature, consult the Developer Playbook, relevant backend and frontend architecture, the API/database/architecture documentation, and the testing guidance. Implement backend and frontend contract changes together when needed, then update tests and affected documentation. Verify ownership isolation, validation, archive behavior, month boundaries, money calculations, and response envelopes.
 
 ## Engineering Audits
 

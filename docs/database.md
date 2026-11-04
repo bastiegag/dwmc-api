@@ -7,6 +7,11 @@ Prisma connection string for that local database. Supabase Auth is separate:
 `UserProfile.authUserId` uniquely links a local profile to a Supabase Auth user.
 Every business model is scoped to `UserProfile.id`.
 
+`UserProfile.authUserId` is the unique local reference to the verified
+Supabase identity. Email remains owned by Supabase. Profile currency is a
+presentation/default preference and does not convert stored amounts or mutate
+historical financial values.
+
 ## Models
 
 The schema contains `UserProfile`, `Section`, `Category`, `Account`,
@@ -47,6 +52,12 @@ Financial columns use PostgreSQL `Decimal(12,2)`. API monetary inputs must be
 finite, within the `Decimal(12,2)` range, and have no more than two decimal
 places. Account adjustments may be negative; income, expenses, transfers, and
 budgets follow their type-specific non-negative or positive rules.
+
+Balances and monthly summaries use integer-cent arithmetic in services.
+`currentBalance` is calculated as starting balance plus income, adjustments,
+and incoming transfers, minus expenses and outgoing transfers. Budget spending
+includes only non-archived expenses in the selected UTC month. Decimal values
+are converted to JSON numbers only at the response boundary.
 
 ## Migration Workflow
 

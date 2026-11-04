@@ -128,11 +128,10 @@ database.
 
 - [Architecture](docs/architecture.md)
 - [API design](docs/api.md)
-- [Authentication](docs/domains/auth.md)
 - [Database](docs/database.md)
+- [Development](docs/development.md)
 - [Testing](docs/testing.md)
-- [Development and releases](docs/RELEASING.md)
-- [Domain documentation](docs/domains/)
+- [Releasing](docs/RELEASING.md)
 - [Frontend repository](https://github.com/bastiegag/dwmc-web)
 
 ## License

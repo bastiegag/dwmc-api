@@ -34,29 +34,29 @@
         "@hono/node-server": "^2.1.6",
         "@prisma/client": "^5.22.0",
         "@supabase/supabase-js": "^2.118.0",
-        "dotenv": "^17.4.2",
+        "dotenv": "^18.0.9",
         "hono": "^4.13.16",
         "zod": "^4.6.7"
     },
     "devDependencies": {
-        "@commitlint/cli": "^19.6.1",
-        "@commitlint/config-conventional": "^19.6.1",
-        "@types/node": "^22.20.5",
-        "@vitest/coverage-v8": "^4.1.12",
-        "eslint": "^9.16.0",
-        "eslint-config-prettier": "^9.1.0",
+        "@commitlint/cli": "^21.2.4",
+        "@commitlint/config-conventional": "^21.2.4",
+        "@types/node": "^24.19.2",
+        "@vitest/coverage-v8": "^5.1.0",
+        "eslint": "^10.14.0",
+        "eslint-config-prettier": "^10.1.8",
         "husky": "^9.1.7",
         "prettier": "^3.9.10",
         "prisma": "^5.22.0",
         "tsx": "^4.23.15",
-        "typescript": "^5.7.2",
+        "typescript": "^5.9.3",
         "typescript-eslint": "^8.72.1",
-        "vitest": "^4.1.12"
+        "vitest": "^5.1.0"
     },
     "allowScripts": {
         "@prisma/client@5.22.0": true,
         "@prisma/engines@5.22.0": true,
-        "esbuild@0.28.1": true,
+        "esbuild@0.28.2": true,
         "fsevents@2.3.3": true,
         "prisma@5.22.0": true
     }
