@@ -10,7 +10,7 @@ Consult documentation in this order before making design decisions:
 
 1. [Developer Playbook](../../dwmc-web/docs/dev-playbook.md) for shared development principles and feature workflow.
 2. [Engineering Audit Playbook](../../dwmc-web/docs/engineering-audit-playbook.md) for review scope, severity, and closure criteria.
-3. [Backend Architecture](../docs/architecture.md) and [frontend architecture](../../dwmc-web/docs/frontend-architecture.md) for responsibilities and boundaries.
+3. [Backend Architecture](../docs/architecture.md) and [frontend architecture](../../dwmc-web/docs/architecture.md) for responsibilities and boundaries.
 4. [API design](../docs/api.md), [database](../docs/database.md), and [architecture](../docs/architecture.md) for contracts and business rules.
 5. ADRs, when present, for decisions that constrain the implementation.
 6. The relevant [README](../README.md) and package scripts for setup, commands, and repository orientation.

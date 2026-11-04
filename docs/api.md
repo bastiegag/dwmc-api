@@ -56,7 +56,10 @@ includes the same request ID in structured request logs.
 | GET/PATCH/DELETE | `/api/v1/budgets/:id`      | Authenticated | Read, update, or archive a budget.            |
 | GET/PATCH        | `/api/v1/profile`          | Authenticated | Current user's profile; GET initializes it.   |
 
-Request schemas are defined beside each route in `src/modules/*/*.schema.ts`. The module docs describe the business rules and filters for each resource.
+Request schemas are defined beside each route in `src/modules/*/*.schema.ts`.
+Business rules and resource filters are summarized in this document; the route,
+schema, service, and integration tests remain authoritative for implementation
+details.
 
 ## Query and Pagination
 
