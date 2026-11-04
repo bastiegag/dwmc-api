@@ -25,6 +25,17 @@ postgresql://postgres:postgres@localhost:5432/dwmc_api?schema=public
 Do not put real credentials in committed files. You may use another local
 PostgreSQL installation by changing `DATABASE_URL` in `.env`.
 
+Integration tests use a separate `dwmc_api_test` database. Set
+`DATABASE_URL` to that database before running `npm run test:integration`; the
+test setup refuses URLs that do not contain `_test`. CI creates this database
+in an isolated PostgreSQL service and applies migrations with
+`prisma migrate deploy`.
+
+Financial columns use PostgreSQL `Decimal(12,2)`. API monetary inputs must be
+finite, within the `Decimal(12,2)` range, and have no more than two decimal
+places. Account adjustments may be negative; income, expenses, transfers, and
+budgets follow their type-specific non-negative or positive rules.
+
 ## Migration Workflow
 
 Migration history is committed under `prisma/migrations`.

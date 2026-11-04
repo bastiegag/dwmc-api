@@ -81,6 +81,7 @@ and does not require a service-role key.
 npm run dev
 npm run validate
 npm run test
+npm run test:integration
 npm run db:generate
 npm run db:migrate
 npm run db:studio
@@ -89,8 +90,20 @@ npm run db:seed
 ```
 
 `npm run db:migrate` creates and applies local development migrations. Commit
-schema changes and migrations together. Tests mock Prisma and Supabase, so the
-normal test suite does not require live credentials or a running database.
+schema changes and migrations together. The normal test suite mocks Prisma and
+Supabase and does not require live credentials or a running database.
+
+The isolated PostgreSQL integration suite uses the dedicated `dwmc_api_test`
+database and requires the local PostgreSQL container to be running. It applies
+committed migrations before testing and cleans all test data between cases:
+
+```bash
+docker compose up -d
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/dwmc_api_test?schema=public \
+    npm run test:integration
+```
+
+Never point the integration suite at a development or production database.
 
 `npm run validate` covers formatting, linting, typechecking, tests, and the
 production build. The active CI workflow runs the same quality gates for this

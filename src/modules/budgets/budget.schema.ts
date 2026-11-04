@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { monetaryNumberSchema } from '../../shared/money/schema.js'
 
 const monthSchema = z
     .string()
@@ -16,13 +17,13 @@ const queryBooleanSchema = z
 export const createBudgetSchema = z.object({
     categoryId: z.string().min(1),
     month: monthSchema,
-    amount: z.coerce.number().min(0),
+    amount: monetaryNumberSchema.min(0),
 })
 
 export const updateBudgetSchema = z.object({
     categoryId: z.string().min(1).optional(),
     month: monthSchema.optional(),
-    amount: z.coerce.number().min(0).optional(),
+    amount: monetaryNumberSchema.min(0).optional(),
     isArchived: z.boolean().optional(),
 })
 

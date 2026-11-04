@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { monetaryNumberSchema } from '../../shared/money/schema.js'
 
 const queryBooleanSchema = z
     .enum(['true', 'false'])
@@ -18,8 +19,8 @@ export const accountTypeSchema = z.enum([
 export const createAccountSchema = z.object({
     name: z.string().trim().min(1).max(80),
     type: accountTypeSchema.optional(),
-    startingBalance: z.coerce.number().optional(),
-    goal: z.coerce.number().positive().nullable().optional(),
+    startingBalance: monetaryNumberSchema.optional(),
+    goal: monetaryNumberSchema.positive().nullable().optional(),
     color: z.string().trim().min(1).max(40),
     icon: z.string().trim().min(1).max(80),
 })
@@ -27,8 +28,8 @@ export const createAccountSchema = z.object({
 export const updateAccountSchema = z.object({
     name: z.string().trim().min(1).max(80).optional(),
     type: accountTypeSchema.optional(),
-    startingBalance: z.coerce.number().optional(),
-    goal: z.coerce.number().positive().nullable().optional(),
+    startingBalance: monetaryNumberSchema.optional(),
+    goal: monetaryNumberSchema.positive().nullable().optional(),
     color: z.string().trim().min(1).max(40).optional(),
     icon: z.string().trim().min(1).max(80).optional(),
     isArchived: z.boolean().optional(),

@@ -71,3 +71,16 @@ Budgets accept `month`, `categoryId`, and `includeArchived`. Summary accepts `mo
 Dates serialize as ISO strings. Month values use `YYYY-MM` and are calculated with UTC start-of-month and next-month boundaries. Prisma Decimal values are serialized to JSON numbers. Resource delete operations set `isArchived`; archived records are excluded by default where list queries provide that behavior.
 
 For frontend consumption patterns, see `dwmc-web/docs/api.md` in the sibling repository. Authentication responsibilities are documented in [domains/auth.md](domains/auth.md). When changing a contract, inspect that client before merging the backend change.
+
+## Financial and authorization boundaries
+
+The API is authoritative for monetary validation and calculations. Monetary
+inputs are finite, limited to PostgreSQL `Decimal(12,2)`, and restricted to
+two decimal places before persistence. Account balances and summaries use
+integer-cent arithmetic, and archived transactions are excluded from active
+balances, summaries, and budget expense totals.
+
+Authenticated resource queries are scoped by the local `UserProfile.id`
+resolved from the verified Supabase user. Services validate ownership of every
+referenced account, category, and section before creating or updating a
+resource; clients cannot introduce cross-user references through payloads.
