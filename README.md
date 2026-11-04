@@ -88,6 +88,7 @@ and does not require a service-role key.
 npm run dev
 npm run validate
 npm run test
+npm run test:integration
 npm run db:generate
 npm run db:migrate
 npm run db:studio
@@ -96,8 +97,30 @@ npm run db:seed
 ```
 
 `npm run db:migrate` creates and applies local development migrations. Commit
-schema changes and migrations together. Tests mock Prisma and Supabase, so the
-normal test suite does not require live credentials or a running database.
+schema changes and migrations together. The normal test suite mocks Prisma and
+Supabase and does not require live credentials or a running database.
+
+The isolated PostgreSQL integration suite uses the exact dedicated
+`dwmc_api_test` database. `npm run test:integration` verifies that the local
+PostgreSQL server is reachable, creates only `dwmc_api_test` when it is
+missing, and applies committed migrations before testing. The configured
+PostgreSQL role must have `CREATEDB` permission the first time the database is
+initialized; otherwise create the database manually or use a role with that
+permission. The suite cleans only test data between cases:
+
+```bash
+docker compose up -d
+NODE_ENV=test \
+DWMC_INTEGRATION_TEST=1 \
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/dwmc_api_test?schema=public \
+    npm run test:integration
+```
+
+There are no safety defaults: the runner intentionally rejects missing or
+invalid `NODE_ENV`, `DWMC_INTEGRATION_TEST`, and `DATABASE_URL` values before
+connecting to PostgreSQL. To use another local PostgreSQL installation, set
+`DATABASE_URL` to the corresponding `dwmc_api_test` URL. Never point the
+integration suite at `dwmc_api` or a production database.
 
 `npm run validate` covers formatting, linting, typechecking, tests, and the
 production build. The active CI workflow runs the same quality gates for this
@@ -112,11 +135,10 @@ database.
 
 - [Architecture](docs/architecture.md)
 - [API design](docs/api.md)
-- [Authentication](docs/domains/auth.md)
 - [Database](docs/database.md)
+- [Development](docs/development.md)
 - [Testing](docs/testing.md)
-- [Development and releases](docs/RELEASING.md)
-- [Domain documentation](docs/domains/)
+- [Releasing](docs/RELEASING.md)
 - [Frontend repository](https://github.com/bastiegag/dwmc-web)
 
 ## License

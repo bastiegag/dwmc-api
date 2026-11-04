@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { monetaryNumberSchema } from '../../shared/money/schema.js'
 
 const queryBooleanSchema = z
     .enum(['true', 'false'])
@@ -28,7 +29,9 @@ const noteSchema = z.string().trim().max(500).nullable().optional()
 
 const incomeSchema = z.object({
     type: z.literal('INCOME'),
-    amount: z.coerce.number().refine((n) => n > 0, { message: 'Amount must be greater than 0' }),
+    amount: monetaryNumberSchema.refine((n) => n > 0, {
+        message: 'Amount must be greater than 0',
+    }),
     date: transactionDateSchema,
     accountId: z.string().min(1),
     categoryId: z.string().min(1).nullable().optional(),
@@ -38,7 +41,9 @@ const incomeSchema = z.object({
 
 const expenseSchema = z.object({
     type: z.literal('EXPENSE'),
-    amount: z.coerce.number().refine((n) => n > 0, { message: 'Amount must be greater than 0' }),
+    amount: monetaryNumberSchema.refine((n) => n > 0, {
+        message: 'Amount must be greater than 0',
+    }),
     date: transactionDateSchema,
     accountId: z.string().min(1),
     categoryId: z.string().min(1).nullable().optional(),
@@ -48,7 +53,9 @@ const expenseSchema = z.object({
 
 const transferSchema = z.object({
     type: z.literal('TRANSFER'),
-    amount: z.coerce.number().refine((n) => n > 0, { message: 'Amount must be greater than 0' }),
+    amount: monetaryNumberSchema.refine((n) => n > 0, {
+        message: 'Amount must be greater than 0',
+    }),
     date: transactionDateSchema,
     fromAccountId: z.string().min(1),
     toAccountId: z.string().min(1),
@@ -57,7 +64,7 @@ const transferSchema = z.object({
 
 const adjustmentSchema = z.object({
     type: z.literal('ADJUSTMENT'),
-    amount: z.coerce.number(),
+    amount: monetaryNumberSchema,
     date: transactionDateSchema,
     accountId: z.string().min(1),
     note: noteSchema,
@@ -72,7 +79,7 @@ export const createTransactionSchema = z.discriminatedUnion('type', [
 
 export const updateTransactionSchema = z.object({
     type: transactionTypeSchema.optional(),
-    amount: z.coerce.number().optional(),
+    amount: monetaryNumberSchema.optional(),
     date: transactionDateSchema.optional(),
     accountId: z.string().min(1).optional().nullable(),
     fromAccountId: z.string().min(1).optional().nullable(),

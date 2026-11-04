@@ -7,6 +7,11 @@ Prisma connection string for that local database. Supabase Auth is separate:
 `UserProfile.authUserId` uniquely links a local profile to a Supabase Auth user.
 Every business model is scoped to `UserProfile.id`.
 
+`UserProfile.authUserId` is the unique local reference to the verified
+Supabase identity. Email remains owned by Supabase. Profile currency is a
+presentation/default preference and does not convert stored amounts or mutate
+historical financial values.
+
 ## Models
 
 The schema contains `UserProfile`, `Section`, `Category`, `Account`,
@@ -24,6 +29,35 @@ postgresql://postgres:postgres@localhost:5432/dwmc_api?schema=public
 
 Do not put real credentials in committed files. You may use another local
 PostgreSQL installation by changing `DATABASE_URL` in `.env`.
+
+Integration tests use a separate database named exactly `dwmc_api_test`.
+The integration command must explicitly set `NODE_ENV=test`,
+`DWMC_INTEGRATION_TEST=1`, and a local `DATABASE_URL` targeting this database.
+It validates the URL, checks whether this database exists, creates it only when
+absent, and applies committed migrations with
+`prisma migrate deploy`. It never drops, resets, truncates, or modifies
+`dwmc_api`. The runner requires `DWMC_INTEGRATION_TEST=1` for destructive test
+operations and rejects missing authorization, production, or remote database configurations. The
+PostgreSQL role must have `CREATEDB` permission for automatic initialization;
+if it does not, create `dwmc_api_test` with an appropriately privileged local
+role before running the suite. CI provides the flag and creates the database
+in its isolated PostgreSQL service.
+
+Monetary API values reject null, blank strings, booleans, arrays, non-finite
+numbers, values outside `Decimal(12,2)`, and values with more than two decimal
+places. Numeric strings, zero where allowed, and negative adjustments remain
+supported.
+
+Financial columns use PostgreSQL `Decimal(12,2)`. API monetary inputs must be
+finite, within the `Decimal(12,2)` range, and have no more than two decimal
+places. Account adjustments may be negative; income, expenses, transfers, and
+budgets follow their type-specific non-negative or positive rules.
+
+Balances and monthly summaries use integer-cent arithmetic in services.
+`currentBalance` is calculated as starting balance plus income, adjustments,
+and incoming transfers, minus expenses and outgoing transfers. Budget spending
+includes only non-archived expenses in the selected UTC month. Decimal values
+are converted to JSON numbers only at the response boundary.
 
 ## Migration Workflow
 

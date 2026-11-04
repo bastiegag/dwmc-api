@@ -110,6 +110,9 @@ const isMonetaryTransaction = (type: TransactionKind) => {
 }
 
 const ensurePositiveAmount = (amount: number) => {
+    if (!Number.isFinite(amount)) {
+        throw new AppError('VALIDATION_ERROR', 'Amount must be finite', 422)
+    }
     if (amount <= 0) throw new AppError('VALIDATION_ERROR', 'Amount must be greater than 0', 422)
 }
 
