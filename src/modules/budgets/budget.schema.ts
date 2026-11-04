@@ -17,13 +17,18 @@ const queryBooleanSchema = z
 export const createBudgetSchema = z.object({
     categoryId: z.string().min(1),
     month: monthSchema,
-    amount: monetaryNumberSchema.min(0),
+    amount: monetaryNumberSchema.refine(
+        (value) => value >= 0,
+        'Number must be greater than or equal to 0',
+    ),
 })
 
 export const updateBudgetSchema = z.object({
     categoryId: z.string().min(1).optional(),
     month: monthSchema.optional(),
-    amount: monetaryNumberSchema.min(0).optional(),
+    amount: monetaryNumberSchema
+        .refine((value) => value >= 0, 'Number must be greater than or equal to 0')
+        .optional(),
     isArchived: z.boolean().optional(),
 })
 

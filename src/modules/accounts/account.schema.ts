@@ -20,7 +20,10 @@ export const createAccountSchema = z.object({
     name: z.string().trim().min(1).max(80),
     type: accountTypeSchema.optional(),
     startingBalance: monetaryNumberSchema.optional(),
-    goal: monetaryNumberSchema.positive().nullable().optional(),
+    goal: monetaryNumberSchema
+        .refine((value) => value > 0, 'Number must be greater than 0')
+        .nullable()
+        .optional(),
     color: z.string().trim().min(1).max(40),
     icon: z.string().trim().min(1).max(80),
 })
@@ -29,7 +32,10 @@ export const updateAccountSchema = z.object({
     name: z.string().trim().min(1).max(80).optional(),
     type: accountTypeSchema.optional(),
     startingBalance: monetaryNumberSchema.optional(),
-    goal: monetaryNumberSchema.positive().nullable().optional(),
+    goal: monetaryNumberSchema
+        .refine((value) => value > 0, 'Number must be greater than 0')
+        .nullable()
+        .optional(),
     color: z.string().trim().min(1).max(40).optional(),
     icon: z.string().trim().min(1).max(80).optional(),
     isArchived: z.boolean().optional(),

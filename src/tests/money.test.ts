@@ -28,4 +28,17 @@ describe('money arithmetic', () => {
         expect(monetaryNumberSchema.safeParse(10_000_000_000).success).toBe(false)
         expect(monetaryNumberSchema.safeParse(-9999999999.99).success).toBe(true)
     })
+
+    it.each([null, '', '   ', true, false, [], undefined])(
+        'rejects unsafe monetary input %j',
+        (value) => {
+            expect(monetaryNumberSchema.safeParse(value).success).toBe(false)
+        },
+    )
+
+    it('accepts finite numeric strings and zero', () => {
+        expect(monetaryNumberSchema.parse('12.50')).toBe(12.5)
+        expect(monetaryNumberSchema.parse(' 0 ')).toBe(0)
+        expect(monetaryNumberSchema.parse(-12.5)).toBe(-12.5)
+    })
 })

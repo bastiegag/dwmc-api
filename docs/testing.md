@@ -5,11 +5,14 @@
 Vitest runs the backend tests. Tests live under `src/tests/` and use `src/tests/setup.ts`. Prisma and Supabase are mocked with `vi.mock()`, so the normal suite does not need a running database or real Supabase credentials.
 
 The separate `src/integration-tests/` suite uses a real PostgreSQL database
-with committed Prisma migrations. It requires a dedicated database name
-containing `_test`, cleans all domain tables between tests, and never uses
-Supabase. Run it with `npm run test:integration` after starting the local
-PostgreSQL container. CI provisions a separate PostgreSQL service and runs the
-same command.
+with committed Prisma migrations. It requires the exact database name
+`dwmc_api_test`, the `DWMC_INTEGRATION_TEST=1` safety flag, and a local
+PostgreSQL host. `npm run test:integration` creates the database when missing,
+applies migrations, and then runs the suite. The configured role needs
+`CREATEDB` permission for first-time initialization; otherwise create the
+dedicated database manually. Cleanup is guarded by the same safety checks and
+never targets the development database. The suite never uses Supabase. CI
+provisions a separate PostgreSQL service and runs the same guarded command.
 
 ## Test Priorities
 

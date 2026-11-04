@@ -93,9 +93,13 @@ npm run db:seed
 schema changes and migrations together. The normal test suite mocks Prisma and
 Supabase and does not require live credentials or a running database.
 
-The isolated PostgreSQL integration suite uses the dedicated `dwmc_api_test`
-database and requires the local PostgreSQL container to be running. It applies
-committed migrations before testing and cleans all test data between cases:
+The isolated PostgreSQL integration suite uses the exact dedicated
+`dwmc_api_test` database. `npm run test:integration` verifies that the local
+PostgreSQL server is reachable, creates only `dwmc_api_test` when it is
+missing, and applies committed migrations before testing. The configured
+PostgreSQL role must have `CREATEDB` permission the first time the database is
+initialized; otherwise create the database manually or use a role with that
+permission. The suite cleans only test data between cases:
 
 ```bash
 docker compose up -d
@@ -103,7 +107,12 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/dwmc_api_test?schema=
     npm run test:integration
 ```
 
-Never point the integration suite at a development or production database.
+The runner uses the dedicated test URL by default. To use another local
+PostgreSQL installation, set `DATABASE_URL` to the corresponding
+`dwmc_api_test` URL. Integration operations are guarded by
+`DWMC_INTEGRATION_TEST=1` and reject development, remote, malformed, or
+production database URLs. Never point the integration suite at `dwmc_api` or a
+production database.
 
 `npm run validate` covers formatting, linting, typechecking, tests, and the
 production build. The active CI workflow runs the same quality gates for this

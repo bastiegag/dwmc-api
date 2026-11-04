@@ -11,11 +11,17 @@ import {
     createTransaction,
 } from '../modules/transactions/transaction.service.js'
 import type { AuthUser } from '../types/app.js'
+import { assertSafeIntegrationDatabase } from './database-safety.js'
 
 const userOne: AuthUser = { id: 'integration-user-1', email: 'one@example.com' }
 const userTwo: AuthUser = { id: 'integration-user-2', email: 'two@example.com' }
 
 const clearDatabase = async () => {
+    assertSafeIntegrationDatabase({
+        databaseUrl: process.env['DATABASE_URL'],
+        integrationFlag: process.env['DWMC_INTEGRATION_TEST'],
+        nodeEnv: process.env['NODE_ENV'],
+    })
     await prisma.$transaction([
         prisma.transaction.deleteMany(),
         prisma.budget.deleteMany(),
@@ -28,12 +34,11 @@ const clearDatabase = async () => {
 
 describe('PostgreSQL persistence and domain integration', () => {
     beforeAll(async () => {
-        const databaseUrl = process.env['DATABASE_URL'] ?? ''
-        if (!databaseUrl.includes('_test')) {
-            throw new Error(
-                'Integration tests require a dedicated DATABASE_URL containing "_test".',
-            )
-        }
+        assertSafeIntegrationDatabase({
+            databaseUrl: process.env['DATABASE_URL'],
+            integrationFlag: process.env['DWMC_INTEGRATION_TEST'],
+            nodeEnv: process.env['NODE_ENV'],
+        })
         await prisma.$queryRaw`SELECT 1`
     })
 

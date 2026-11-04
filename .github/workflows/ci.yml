@@ -75,4 +75,5 @@ jobs:
             - name: Run PostgreSQL integration tests
               env:
                   DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dwmc_api_test?schema=public
+                  DWMC_INTEGRATION_TEST: '1'
               run: npm run test:integration

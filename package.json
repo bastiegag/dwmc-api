@@ -19,7 +19,7 @@
         "format": "prettier --write .",
         "format:check": "prettier --check .",
         "test": "vitest run",
-        "test:integration": "node scripts/test-integration.mjs",
+        "test:integration": "tsx scripts/test-integration.ts",
         "test:watch": "vitest",
         "test:coverage": "vitest run --coverage",
         "validate": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build",
