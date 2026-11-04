@@ -26,11 +26,13 @@ Do not put real credentials in committed files. You may use another local
 PostgreSQL installation by changing `DATABASE_URL` in `.env`.
 
 Integration tests use a separate database named exactly `dwmc_api_test`.
-`npm run test:integration` validates the URL, checks whether this database
-exists, creates it only when absent, and applies committed migrations with
+The integration command must explicitly set `NODE_ENV=test`,
+`DWMC_INTEGRATION_TEST=1`, and a local `DATABASE_URL` targeting this database.
+It validates the URL, checks whether this database exists, creates it only when
+absent, and applies committed migrations with
 `prisma migrate deploy`. It never drops, resets, truncates, or modifies
 `dwmc_api`. The runner requires `DWMC_INTEGRATION_TEST=1` for destructive test
-operations and rejects production or remote database configurations. The
+operations and rejects missing authorization, production, or remote database configurations. The
 PostgreSQL role must have `CREATEDB` permission for automatic initialization;
 if it does not, create `dwmc_api_test` with an appropriately privileged local
 role before running the suite. CI provides the flag and creates the database

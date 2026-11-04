@@ -41,6 +41,12 @@ describe('integration database safety', () => {
     it('rejects production environments', () => {
         expect(() =>
             assertSafeIntegrationDatabase({ ...validConfig, nodeEnv: 'production' }),
-        ).toThrow(/production/)
+        ).toThrow(/NODE_ENV=test/)
+    })
+
+    it.each([undefined, 'development', 'production'])('rejects NODE_ENV=%s', (nodeEnv) => {
+        expect(() => assertSafeIntegrationDatabase({ ...validConfig, nodeEnv })).toThrow(
+            /NODE_ENV=test/,
+        )
     })
 })

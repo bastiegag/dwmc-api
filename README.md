@@ -103,16 +103,17 @@ permission. The suite cleans only test data between cases:
 
 ```bash
 docker compose up -d
+NODE_ENV=test \
+DWMC_INTEGRATION_TEST=1 \
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/dwmc_api_test?schema=public \
     npm run test:integration
 ```
 
-The runner uses the dedicated test URL by default. To use another local
-PostgreSQL installation, set `DATABASE_URL` to the corresponding
-`dwmc_api_test` URL. Integration operations are guarded by
-`DWMC_INTEGRATION_TEST=1` and reject development, remote, malformed, or
-production database URLs. Never point the integration suite at `dwmc_api` or a
-production database.
+There are no safety defaults: the runner intentionally rejects missing or
+invalid `NODE_ENV`, `DWMC_INTEGRATION_TEST`, and `DATABASE_URL` values before
+connecting to PostgreSQL. To use another local PostgreSQL installation, set
+`DATABASE_URL` to the corresponding `dwmc_api_test` URL. Never point the
+integration suite at `dwmc_api` or a production database.
 
 `npm run validate` covers formatting, linting, typechecking, tests, and the
 production build. The active CI workflow runs the same quality gates for this

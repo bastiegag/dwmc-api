@@ -4,11 +4,9 @@ import {
     TEST_DATABASE_NAME,
 } from '../src/integration-tests/database-safety.js'
 
-const databaseUrl =
-    process.env['DATABASE_URL'] ??
-    'postgresql://postgres:postgres@localhost:5432/dwmc_api_test?schema=public'
-const integrationFlag = process.env['DWMC_INTEGRATION_TEST'] ?? '1'
-const nodeEnv = process.env['NODE_ENV'] ?? 'test'
+const databaseUrl = process.env['DATABASE_URL']
+const integrationFlag = process.env['DWMC_INTEGRATION_TEST']
+const nodeEnv = process.env['NODE_ENV']
 
 const testDatabase = assertSafeIntegrationDatabase({
     databaseUrl,
@@ -45,9 +43,9 @@ try {
 
 const environment = {
     ...process.env,
-    DATABASE_URL: databaseUrl,
-    DWMC_INTEGRATION_TEST: '1',
-    NODE_ENV: 'test',
+    DATABASE_URL: testDatabase.toString(),
+    DWMC_INTEGRATION_TEST: integrationFlag,
+    NODE_ENV: nodeEnv,
 }
 const command = process.platform === 'win32' ? 'npx.cmd' : 'npx'
 

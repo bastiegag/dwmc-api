@@ -1,6 +1,5 @@
 import { assertSafeIntegrationDatabase } from './database-safety.js'
 
-process.env['NODE_ENV'] ??= 'test'
 assertSafeIntegrationDatabase({
     databaseUrl: process.env['DATABASE_URL'],
     integrationFlag: process.env['DWMC_INTEGRATION_TEST'],

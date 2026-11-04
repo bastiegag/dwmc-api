@@ -19,8 +19,8 @@ export const assertSafeIntegrationDatabase = ({
         )
     }
 
-    if (nodeEnv === 'production') {
-        throw new Error('Integration database operations are forbidden when NODE_ENV=production.')
+    if (nodeEnv !== 'test') {
+        throw new Error('Integration database operations require NODE_ENV=test.')
     }
 
     if (!databaseUrl) {
